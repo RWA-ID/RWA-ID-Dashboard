@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 import NameLookup from './NameLookup'
@@ -8,16 +8,17 @@ export default function TransferabilityPanel({ projectId, project, onRefresh }) 
   const [tokenTransferable, setTokenTransferable] = useState(true)
 
   const {
-    writeContract: writeProject, data: projectHash, isPending: projectPending,
+    writeContract: writeProject, data: projectHash, isPending: projectPending, error: projectError,
   } = useWriteContract()
   const {
-    writeContract: writeToken, data: tokenHash, isPending: tokenPending,
+    writeContract: writeToken, data: tokenHash, isPending: tokenPending, error: tokenError,
   } = useWriteContract()
 
   const { isLoading: projectConfirming, isSuccess: projectSuccess } = useWaitForTransactionReceipt({ hash: projectHash })
   const { isLoading: tokenConfirming, isSuccess: tokenSuccess } = useWaitForTransactionReceipt({ hash: tokenHash })
 
-  if (projectSuccess || tokenSuccess) onRefresh()
+  useEffect(() => { if (projectSuccess) onRefresh() }, [projectSuccess])
+  useEffect(() => { if (tokenSuccess) onRefresh() }, [tokenSuccess])
 
   const handleProjectTransfer = (val) => {
     writeProject({
@@ -56,6 +57,8 @@ export default function TransferabilityPanel({ projectId, project, onRefresh }) 
           </div>
         </div>
 
+        {projectError && <p className="text-red-400 text-xs mb-3">{projectError.shortMessage || projectError.message}</p>}
+
         <div className="flex gap-3">
           <button
             onClick={() => handleProjectTransfer(false)}
@@ -81,7 +84,7 @@ export default function TransferabilityPanel({ projectId, project, onRefresh }) 
       <div>
         <h3 className="font-['Syne'] text-lg font-700 text-white mb-1">Override Specific Token</h3>
         <p className="text-white/40 text-sm mb-5">
-          Override transferability on a specific already-minted token. Click a claimed identity below to pre-fill, or enter a token ID manually.
+          Override transferability on a specific already-minted token. Look up a name below to pre-fill, or enter a token ID manually.
         </p>
 
         {/* Name lookup */}
@@ -124,6 +127,8 @@ export default function TransferabilityPanel({ projectId, project, onRefresh }) 
               </button>
             </div>
           </div>
+
+          {tokenError && <p className="text-red-400 text-xs">{tokenError.shortMessage || tokenError.message}</p>}
 
           <button
             onClick={handleTokenTransfer}

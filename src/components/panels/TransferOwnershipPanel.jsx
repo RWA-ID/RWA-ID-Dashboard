@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { isAddress } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
@@ -7,10 +7,10 @@ export default function TransferOwnershipPanel({ projectId, project, onRefresh }
   const [newOwner, setNewOwner] = useState('')
   const [confirmed, setConfirmed] = useState(false)
 
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
-  if (isSuccess) onRefresh()
+  useEffect(() => { if (isSuccess) onRefresh() }, [isSuccess])
 
   const isValid = isAddress(newOwner)
 
@@ -67,6 +67,8 @@ export default function TransferOwnershipPanel({ projectId, project, onRefresh }
             </span>
           </label>
         )}
+
+        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
 
         <button
           onClick={handleSubmit}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { isAddress } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
@@ -6,10 +6,10 @@ import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 export default function TreasuryPanel({ projectId, project, onRefresh }) {
   const [newTreasury, setNewTreasury] = useState('')
 
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
-  if (isSuccess) onRefresh()
+  useEffect(() => { if (isSuccess) onRefresh() }, [isSuccess])
 
   const isValid = isAddress(newTreasury)
 
@@ -48,6 +48,8 @@ export default function TreasuryPanel({ projectId, project, onRefresh }) {
           />
           {newTreasury && !isValid && <p className="text-red-400 text-xs mt-1">Enter a valid Ethereum address</p>}
         </div>
+
+        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
 
         <button
           onClick={handleSubmit}

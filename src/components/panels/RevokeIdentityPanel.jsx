@@ -1,28 +1,37 @@
-import { useState } from 'react'
-import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
+import { useState, useEffect } from 'react'
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
+import { readClient } from '../../lib/readClient'
 import NameLookup from './NameLookup'
 
 export default function RevokeIdentityPanel({ projectId, project, onRefresh }) {
   const [tokenId, setTokenId] = useState('')
   const [confirmed, setConfirmed] = useState(false)
+  const [meta, setMeta] = useState(null)
 
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
-  const { data: meta } = useReadContract({
-    address: RWAID_ADDRESS,
-    abi: RWAID_ABI,
-    functionName: 'tokenMetadata',
-    args: [BigInt(tokenId || 0)],
-    query: { enabled: !!tokenId && Number(tokenId) > 0 },
-  })
+  useEffect(() => {
+    if (isSuccess) { onRefresh(); setTokenId(''); setConfirmed(false); setMeta(null) }
+  }, [isSuccess])
 
-  if (isSuccess) { onRefresh(); setTokenId(''); setConfirmed(false) }
+  // Fetch tokenMetadata via readClient whenever tokenId changes
+  useEffect(() => {
+    const id = Number(tokenId)
+    if (!tokenId || id <= 0) { setMeta(null); return }
+    readClient.readContract({
+      address: RWAID_ADDRESS,
+      abi: RWAID_ABI,
+      functionName: 'tokenMetadata',
+      args: [BigInt(tokenId)],
+    }).then(result => {
+      const arr = Array.isArray(result) ? result : Object.values(result)
+      setMeta({ projectId: arr[0], nameHash: arr[1], claimedAt: arr[2] })
+    }).catch(() => setMeta(null))
+  }, [tokenId])
 
-  // tokenMetadata returns an array: [projectId, nameHash, claimedAt]
-  const metaProjectId = Array.isArray(meta) ? meta[0] : meta?.projectId
-  const belongsToProject = metaProjectId !== undefined && metaProjectId.toString() === projectId.toString()
+  const belongsToProject = meta && meta.projectId.toString() === projectId.toString()
 
   const handleRevoke = () => {
     writeContract({
@@ -72,11 +81,9 @@ export default function RevokeIdentityPanel({ projectId, project, onRefresh }) {
               : 'bg-red-500/5 border border-red-500/20'
           }`}>
             {belongsToProject ? (
-              <>
-                <p className="text-white/60">Token #{tokenId} belongs to <span className="text-blue-400">Project #{metaProjectId?.toString()}</span></p>
-              </>
+              <p className="text-white/60">Token #{tokenId} belongs to <span className="text-blue-400">Project #{meta.projectId?.toString()}</span></p>
             ) : (
-              <p className="text-red-400">Token #{tokenId} does not belong to this project (Project #{metaProjectId?.toString()})</p>
+              <p className="text-red-400">Token #{tokenId} does not belong to this project (Project #{meta.projectId?.toString()})</p>
             )}
           </div>
         )}
@@ -94,6 +101,8 @@ export default function RevokeIdentityPanel({ projectId, project, onRefresh }) {
             </span>
           </label>
         )}
+
+        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
 
         <button
           onClick={handleRevoke}

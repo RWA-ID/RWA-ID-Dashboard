@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
@@ -6,11 +6,11 @@ import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 export default function ClaimFeePanel({ projectId, project, onRefresh }) {
   const [fee, setFee] = useState('')
 
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
   const { data: minFee } = useReadContract({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'minimumClaimFee' })
 
-  if (isSuccess) onRefresh()
+  useEffect(() => { if (isSuccess) onRefresh() }, [isSuccess])
 
   const currentFee = project.claimFee > 0n ? formatUnits(project.claimFee, 6) : null
   const minFeeFormatted = minFee ? formatUnits(minFee, 6) : '0.50'
@@ -62,6 +62,8 @@ export default function ClaimFeePanel({ projectId, project, onRefresh }) {
             <span className="px-4 text-white/30 text-sm">USDC</span>
           </div>
         </div>
+
+        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
 
         <button
           onClick={handleSubmit}

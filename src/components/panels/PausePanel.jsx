@@ -1,11 +1,12 @@
+import { useEffect } from 'react'
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 
 export default function PausePanel({ projectId, project, onRefresh }) {
-  const { writeContract, data: hash, isPending } = useWriteContract()
+  const { writeContract, data: hash, isPending, error } = useWriteContract()
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
 
-  if (isSuccess) onRefresh()
+  useEffect(() => { if (isSuccess) onRefresh() }, [isSuccess])
 
   const handleToggle = () => {
     writeContract({
@@ -43,10 +44,12 @@ export default function PausePanel({ projectId, project, onRefresh }) {
         </div>
       </div>
 
+      {error && <p className="text-red-400 text-xs mb-3">{error.shortMessage || error.message}</p>}
+
       <button
         onClick={handleToggle}
         disabled={isPending || isConfirming}
-        className={`w-full py-3 font-semibold rounded-xl transition-all disabled:opacity-40 ${
+        className={`w-full py-3 font-semibold rounded-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
           project.active
             ? 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20'
             : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20'
