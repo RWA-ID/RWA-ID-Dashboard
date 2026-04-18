@@ -1,6 +1,14 @@
+import { useState } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 import { modal } from './lib/wagmi'
 import ProjectList from './components/ProjectList'
+import ClaimPage from './components/ClaimPage'
+import Landing from './components/Landing'
+
+// Detect claim URL: ?claim={projectId}&proofs={cid}
+const _params = new URLSearchParams(window.location.search)
+const CLAIM_PROJECT_ID = _params.get('claim')
+const CLAIM_CID = _params.get('proofs')
 
 import NetworkEthereum from '@web3icons/react/icons/networks/NetworkEthereum'
 import NetworkBase from '@web3icons/react/icons/networks/NetworkBase'
@@ -20,6 +28,8 @@ import WalletCoinbase from '@web3icons/react/icons/wallets/WalletCoinbase'
 import WalletLedger from '@web3icons/react/icons/wallets/WalletLedger'
 import WalletTrezor from '@web3icons/react/icons/wallets/WalletTrezor'
 
+// ── Primitive components ───────────────────────────────────────────────────────
+
 function FingerprintSVG({ size = 24, color = '#3d7fff' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -37,7 +47,6 @@ function FingerprintSVG({ size = 24, color = '#3d7fff' }) {
   )
 }
 
-// Uniswap Wallet — not in @web3icons/react, using official brand SVG
 function UniswapWalletIcon({ size = 48 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
@@ -46,6 +55,83 @@ function UniswapWalletIcon({ size = 48 }) {
     </svg>
   )
 }
+
+function SquaresBackground({ opacity = 0.035 }) {
+  return (
+    <div
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        backgroundImage: `
+          linear-gradient(rgba(255,255,255,${opacity}) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,${opacity}) 1px, transparent 1px)
+        `,
+        backgroundSize: '28px 28px',
+      }}
+    />
+  )
+}
+
+function SpanPill({ children, color = 'blue' }) {
+  const c = {
+    blue:  'border-blue-500/30 text-blue-300 bg-blue-500/10',
+    green: 'border-green-500/30 text-green-400 bg-green-500/10',
+    gray:  'border-white/10 text-white/40 bg-white/5',
+  }[color]
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border ${c}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+      {children}
+    </span>
+  )
+}
+
+function IconMarquee({ items, size = 48 }) {
+  const doubled = [...items, ...items]
+  return (
+    <div className="overflow-hidden w-full">
+      <div className="flex gap-4 animate-ticker-slow w-max">
+        {doubled.map(({ name, Icon }, i) => (
+          <div
+            key={i}
+            title={name}
+            className="flex-shrink-0 rounded-xl overflow-hidden ring-1 ring-white/8 hover:ring-white/20 transition-all"
+          >
+            {Icon ? <Icon size={size} variant="branded" /> : <UniswapWalletIcon size={size} />}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white/70 text-[10px] transition-all"
+    >
+      {copied ? (
+        <>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          Copied
+        </>
+      ) : (
+        <>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.5" /></svg>
+          Copy
+        </>
+      )}
+    </button>
+  )
+}
+
+// ── Data ───────────────────────────────────────────────────────────────────────
 
 const NETWORKS = [
   { name: 'Ethereum',  Icon: NetworkEthereum },
@@ -61,45 +147,31 @@ const NETWORKS = [
 ]
 
 const WALLETS = [
-  { name: 'MetaMask',       Icon: WalletMetamask },
-  { name: 'Trust Wallet',   Icon: WalletTrust },
-  { name: 'Rainbow',        Icon: WalletRainbow },
-  { name: 'Coinbase Wallet',Icon: WalletCoinbase },
-  { name: 'Ledger',         Icon: WalletLedger },
-  { name: 'Trezor',         Icon: WalletTrezor },
-  { name: 'Uniswap Wallet', Icon: null }, // custom SVG
+  { name: 'MetaMask',        Icon: WalletMetamask },
+  { name: 'Trust Wallet',    Icon: WalletTrust },
+  { name: 'Rainbow',         Icon: WalletRainbow },
+  { name: 'Coinbase Wallet', Icon: WalletCoinbase },
+  { name: 'Ledger',          Icon: WalletLedger },
+  { name: 'Trezor',          Icon: WalletTrezor },
+  { name: 'Uniswap Wallet',  Icon: null },
 ]
 
-const FEATURES = [
-  'Allowlist Management',
-  'Claim Fee Control',
-  'Treasury Routing',
-  'Cross-Chain CCIP Read',
-  'Token Revocation',
-  'Transferability Control',
-]
+const SNIPPET = `// Works with ethers.js, viem, wagmi
+const address = await client.getEnsAddress({
+  name: "joe.myproject.rwa-id.eth",
+  universalResolverAddress: "0x...",
+})`
 
-function IconRow({ items, size = 48 }) {
-  return (
-    <div className="flex flex-wrap justify-center gap-6">
-      {items.map(({ name, Icon }) => (
-        <div key={name} className="flex flex-col items-center gap-2">
-          <div className="rounded-2xl overflow-hidden shadow-lg ring-1 ring-white/10 hover:ring-white/25 hover:scale-105 transition-all duration-200">
-            {Icon
-              ? <Icon size={size} variant="branded" />
-              : <UniswapWalletIcon size={size} />
-            }
-          </div>
-          <span className="text-white/35 text-[10px] tracking-wide text-center leading-tight max-w-[56px]">{name}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+// ── App ────────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
+
+  // Show claim page if URL has ?claim=&proofs= params
+  if (CLAIM_PROJECT_ID && CLAIM_CID) {
+    return <ClaimPage projectId={CLAIM_PROJECT_ID} cid={CLAIM_CID} />
+  }
 
   const handleDisconnect = async () => {
     try { await modal.disconnect() } catch {}
@@ -107,8 +179,13 @@ export default function App() {
     window.location.reload()
   }
 
+  if (!isConnected) {
+    return <Landing onConnect={() => modal.open()} />
+  }
+
   return (
-    <div className="min-h-screen bg-[#0b1120]">
+    <div className="relative min-h-screen bg-[#0b1120] overflow-x-hidden">
+      <div className="relative" style={{ zIndex: 1 }}>
       {/* Header */}
       <header className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -120,112 +197,22 @@ export default function App() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {isConnected ? (
-            <>
-              <span className="text-sm text-white/40 font-mono hidden sm:block">
-                {address?.slice(0, 6)}...{address?.slice(-4)}
-              </span>
-              <button
-                onClick={handleDisconnect}
-                className="px-4 py-2 text-sm border border-white/10 rounded-lg text-white/50 hover:border-white/20 hover:text-white transition-all"
-              >
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => modal.open()}
-              className="px-5 py-2 bg-[#3d7fff] hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-all"
-            >
-              Connect Wallet
-            </button>
-          )}
+          <span className="text-sm text-white/40 font-mono hidden sm:block">
+            {address?.slice(0, 6)}...{address?.slice(-4)}
+          </span>
+          <button
+            onClick={handleDisconnect}
+            className="px-4 py-2 text-sm border border-white/10 rounded-lg text-white/50 hover:border-white/20 hover:text-white transition-all"
+          >
+            Disconnect
+          </button>
         </div>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-12">
-        {isConnected ? (
-          <ProjectList address={address} />
-        ) : (
-          <div className="flex flex-col items-center text-center">
-
-            {/* Hero */}
-            <h1 className="font-['Syne'] text-4xl sm:text-5xl font-800 text-white leading-tight max-w-2xl mb-5">
-              Enterprise Identity Infrastructure{' '}
-              <span className="text-[#3d7fff]">for Real-World Assets</span>
-            </h1>
-            <p className="text-white/40 max-w-lg text-base leading-relaxed mb-3">
-              Issue, manage, and revoke verified on-chain identities for your institutional clients.
-              Built for regulated RWA platforms requiring auditable, cross-chain identity control.
-            </p>
-            <p className="text-white/25 max-w-md text-sm leading-relaxed mb-14">
-              Each identity is a soulbound or transferable ERC-721 token — resolvable across any
-              EVM chain via ENS wildcard and CCIP Read without bridging assets.
-            </p>
-
-            {/* Fingerprint card + features */}
-            <div className="flex flex-col sm:flex-row items-center gap-10 mb-16 w-full max-w-2xl">
-              <div className="relative w-56 h-56 flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-br from-[#3d7fff]/20 to-[#3d7fff]/5 rounded-3xl" />
-                <div className="absolute inset-3 bg-white/5 rounded-2xl border border-white/10 shadow-lg flex flex-col items-center justify-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-[#3d7fff]/10 flex items-center justify-center">
-                    <FingerprintSVG size={38} />
-                  </div>
-                  <div className="text-center">
-                    <p className="font-mono text-[10px] text-white/30">yourproject.rwa-id.eth</p>
-                    <p className="font-['Syne'] text-base font-semibold text-white mt-1">Identity Dashboard</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-white/35">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <span>Soulbound on Ethereum</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-3 text-left">
-                {FEATURES.map(f => (
-                  <div key={f} className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#3d7fff] flex-shrink-0" />
-                    <span className="text-white/60 text-sm">{f}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Supported Networks */}
-            <div className="w-full mb-12">
-              <p className="text-white/20 text-[10px] uppercase tracking-widest mb-6">
-                Cross-chain interoperability via CCIP Read
-              </p>
-              <IconRow items={NETWORKS} size={52} />
-            </div>
-
-            {/* Compatible Wallets */}
-            <div className="w-full mb-14">
-              <p className="text-white/20 text-[10px] uppercase tracking-widest mb-6">
-                Compatible wallets
-              </p>
-              <IconRow items={WALLETS} size={52} />
-            </div>
-
-            {/* Stats */}
-            <div className="flex gap-10">
-              {[
-                { label: 'Networks', value: '10+' },
-                { label: 'Standard', value: 'ERC-721' },
-                { label: 'Resolution', value: 'CCIP Read' },
-              ].map(s => (
-                <div key={s.label} className="text-center">
-                  <p className="font-['Syne'] text-2xl font-700 text-white">{s.value}</p>
-                  <p className="text-white/30 text-xs mt-0.5">{s.label}</p>
-                </div>
-              ))}
-            </div>
-
-          </div>
-        )}
+        <ProjectList address={address} />
       </main>
+      </div>
     </div>
   )
 }
