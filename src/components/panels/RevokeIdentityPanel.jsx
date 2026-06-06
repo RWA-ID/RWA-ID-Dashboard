@@ -5,114 +5,90 @@ import { readClient } from '../../lib/readClient'
 import NameLookup from './NameLookup'
 
 export default function RevokeIdentityPanel({ projectId, project, onRefresh }) {
-  const [tokenId, setTokenId] = useState('')
+  const [tokenId, setTokenId]     = useState('')
   const [confirmed, setConfirmed] = useState(false)
-  const [meta, setMeta] = useState(null)
+  const [meta, setMeta]           = useState(null)
 
   const { writeContract, data: hash, isPending, error } = useWriteContract()
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  const { isLoading: isConfirming, isSuccess }          = useWaitForTransactionReceipt({ hash })
 
   useEffect(() => {
     if (isSuccess) { onRefresh(); setTokenId(''); setConfirmed(false); setMeta(null) }
   }, [isSuccess])
 
-  // Fetch tokenMetadata via readClient whenever tokenId changes
   useEffect(() => {
     const id = Number(tokenId)
     if (!tokenId || id <= 0) { setMeta(null); return }
-    readClient.readContract({
-      address: RWAID_ADDRESS,
-      abi: RWAID_ABI,
-      functionName: 'tokenMetadata',
-      args: [BigInt(tokenId)],
-    }).then(result => {
-      const arr = Array.isArray(result) ? result : Object.values(result)
-      setMeta({ projectId: arr[0], nameHash: arr[1], claimedAt: arr[2] })
-    }).catch(() => setMeta(null))
+    readClient.readContract({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'tokenMetadata', args: [BigInt(tokenId)] })
+      .then(result => {
+        const arr = Array.isArray(result) ? result : Object.values(result)
+        setMeta({ projectId: arr[0], nameHash: arr[1], claimedAt: arr[2] })
+      })
+      .catch(() => setMeta(null))
   }, [tokenId])
 
   const belongsToProject = meta && meta.projectId.toString() === projectId.toString()
 
   const handleRevoke = () => {
-    writeContract({
-      address: RWAID_ADDRESS,
-      abi: RWAID_ABI,
-      functionName: 'revokeIdentity',
-      args: [BigInt(projectId), BigInt(tokenId)],
-    })
-  }
-
-  const handleSelect = (id) => {
-    setTokenId(id)
-    setConfirmed(false)
+    writeContract({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'revokeIdentity',
+      args: [BigInt(projectId), BigInt(tokenId)] })
   }
 
   return (
-    <div>
-      <h3 className="font-['Syne'] text-lg font-700 text-white mb-1">Revoke Identity</h3>
-      <p className="text-white/40 text-sm mb-6">
-        Burns a token, clears its ENS mapping (gateway returns <code className="text-blue-300 bg-white/5 px-1 rounded">address(0)</code>),
+    <section className="section">
+      <h2 className="section-title">Revoke identity</h2>
+      <p className="section-desc">
+        Burns a token, clears its ENS mapping (gateway returns <code style={{ fontFamily: 'var(--f-mono)', fontSize: 12.5, color: 'var(--ink-2)' }}>address(0)</code>),
         and permanently blacklists the name from being re-claimed.
       </p>
 
-      <div className="p-4 bg-red-500/5 border border-red-500/20 rounded-xl mb-6">
-        <p className="text-red-400 text-sm">🚫 This is permanent. The identity cannot be restored once revoked.</p>
-      </div>
+      <div className="danger-zone" style={{ maxWidth: 560 }}>
+        <h3>Revoke identity</h3>
 
-      {/* Name lookup */}
-      <NameLookup projectId={projectId} projectSlug={project?.slug} onSelect={handleSelect} />
+        <div className="callout bad" style={{ marginBottom: 16 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ flexShrink: 0, marginTop: 1 }}>
+            <circle cx="8" cy="8" r="6"/><path d="M4 4l8 8"/>
+          </svg>
+          This is permanent. The identity cannot be restored once revoked.
+        </div>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">Token ID to Revoke</label>
-          <input
-            type="number"
-            placeholder="e.g. 42"
-            value={tokenId}
-            onChange={e => { setTokenId(e.target.value); setConfirmed(false) }}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-red-500/50 transition-all placeholder:text-white/20"
-          />
+        <NameLookup projectId={projectId} projectSlug={project?.slug} onSelect={id => { setTokenId(id); setConfirmed(false) }} />
+
+        <div className="field">
+          <label className="field-label">Token ID to revoke</label>
+          <div className="d-input mono">
+            <input type="number" placeholder="e.g. 42" value={tokenId}
+              onChange={e => { setTokenId(e.target.value); setConfirmed(false) }} />
+          </div>
         </div>
 
         {tokenId && meta && (
-          <div className={`p-3 rounded-xl text-sm ${
-            belongsToProject
-              ? 'bg-white/5 border border-white/10'
-              : 'bg-red-500/5 border border-red-500/20'
-          }`}>
-            {belongsToProject ? (
-              <p className="text-white/60">Token #{tokenId} belongs to <span className="text-blue-400">Project #{meta.projectId?.toString()}</span></p>
-            ) : (
-              <p className="text-red-400">Token #{tokenId} does not belong to this project (Project #{meta.projectId?.toString()})</p>
-            )}
+          <div className={`callout${belongsToProject ? '' : ' bad'}`} style={{ marginBottom: 14 }}>
+            {belongsToProject
+              ? `Token #${tokenId} belongs to Project #${meta.projectId?.toString()}`
+              : `Token #${tokenId} does not belong to this project (Project #${meta.projectId?.toString()})`}
           </div>
         )}
 
         {tokenId && meta && belongsToProject && (
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={e => setConfirmed(e.target.checked)}
-              className="w-4 h-4 accent-red-500"
-            />
-            <span className="text-sm text-white/60">
-              I understand token <span className="text-red-400 font-mono">#{tokenId}</span> will be permanently burned and the name blacklisted.
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 14 }}>
+            <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)}
+              style={{ marginTop: 2, width: 14, height: 14, accentColor: 'var(--bad)' }} />
+            <span style={{ fontSize: 12.5, color: 'var(--ink-3)' }}>
+              I understand token{' '}
+              <code style={{ fontFamily: 'var(--f-mono)', color: 'var(--bad)' }}>#{tokenId}</code>
+              {' '}will be permanently burned and the name blacklisted.
             </span>
           </label>
         )}
 
-        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
+        {error && <p style={{ color: 'var(--bad)', fontSize: 12, marginBottom: 10 }}>{error.shortMessage || error.message}</p>}
 
-        <button
-          onClick={handleRevoke}
-          disabled={!tokenId || !belongsToProject || !confirmed || isPending || isConfirming}
-          className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 disabled:bg-white/10 disabled:text-white/30 text-red-400 border border-red-500/20 font-semibold rounded-xl transition-all"
-        >
-          {isPending ? 'Confirm in wallet...' : isConfirming ? 'Confirming...' : '🚫 Revoke Identity'}
+        <button onClick={handleRevoke} disabled={!tokenId || !belongsToProject || !confirmed || isPending || isConfirming} className="btn btn-danger">
+          {isPending ? 'Confirm in wallet…' : isConfirming ? 'Confirming…' : 'Revoke identity'}
         </button>
-        {isSuccess && <p className="text-green-400 text-sm text-center">✓ Identity revoked</p>}
+        {isSuccess && <p style={{ color: 'var(--good)', fontSize: 12.5, marginTop: 8 }}>✓ Identity revoked</p>}
       </div>
-    </div>
+    </section>
   )
 }

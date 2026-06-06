@@ -4,142 +4,122 @@ import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 import NameLookup from './NameLookup'
 
 export default function TransferabilityPanel({ projectId, project, onRefresh }) {
-  const [tokenId, setTokenId] = useState('')
+  const [tokenId, setTokenId]               = useState('')
   const [tokenTransferable, setTokenTransferable] = useState(true)
 
-  const {
-    writeContract: writeProject, data: projectHash, isPending: projectPending, error: projectError,
-  } = useWriteContract()
-  const {
-    writeContract: writeToken, data: tokenHash, isPending: tokenPending, error: tokenError,
-  } = useWriteContract()
+  const { writeContract: writeProject, data: projectHash, isPending: projectPending, error: projectError } = useWriteContract()
+  const { writeContract: writeToken,   data: tokenHash,   isPending: tokenPending,   error: tokenError   } = useWriteContract()
 
   const { isLoading: projectConfirming, isSuccess: projectSuccess } = useWaitForTransactionReceipt({ hash: projectHash })
-  const { isLoading: tokenConfirming, isSuccess: tokenSuccess } = useWaitForTransactionReceipt({ hash: tokenHash })
+  const { isLoading: tokenConfirming,   isSuccess: tokenSuccess   } = useWaitForTransactionReceipt({ hash: tokenHash })
 
   useEffect(() => { if (projectSuccess) onRefresh() }, [projectSuccess])
-  useEffect(() => { if (tokenSuccess) onRefresh() }, [tokenSuccess])
+  useEffect(() => { if (tokenSuccess)   onRefresh() }, [tokenSuccess])
 
   const handleProjectTransfer = (val) => {
-    writeProject({
-      address: RWAID_ADDRESS,
-      abi: RWAID_ABI,
-      functionName: 'setProjectTransferable',
-      args: [BigInt(projectId), val],
-    })
+    writeProject({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'setProjectTransferable',
+      args: [BigInt(projectId), val] })
   }
 
   const handleTokenTransfer = () => {
-    writeToken({
-      address: RWAID_ADDRESS,
-      abi: RWAID_ABI,
-      functionName: 'setTokenTransferable',
-      args: [BigInt(tokenId), tokenTransferable],
-    })
+    writeToken({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'setTokenTransferable',
+      args: [BigInt(tokenId), tokenTransferable] })
   }
 
   return (
-    <div className="space-y-8">
-      {/* Project-level transferability */}
-      <div>
-        <h3 className="font-['Syne'] text-lg font-700 text-white mb-1">Project Default</h3>
-        <p className="text-white/40 text-sm mb-4">
-          Sets the default transferability for all <em>new</em> tokens minted in this project.
-          Existing tokens are unaffected.
-        </p>
+    <section className="section">
+      <h2 className="section-title">Transferability</h2>
+      <p className="section-desc">
+        Set the default for new tokens and override specific already-minted tokens.
+      </p>
 
-        <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10 mb-4">
-          <div>
-            <p className="text-white text-sm font-semibold">Currently</p>
-            <p className={`text-sm font-semibold ${project.transferable ? 'text-sky-400' : 'text-white/40'}`}>
-              {project.transferable ? 'Transferable' : 'Soulbound (non-transferable)'}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        {/* Project default */}
+        <div className="card">
+          <div className="card-head">
+            <h3>Project default</h3>
+            <span className="meta">Applies to new tokens only</span>
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 14 }}>
+              Sets the default transferability for all <em>new</em> tokens minted in this project. Existing tokens are unaffected.
             </p>
-          </div>
-        </div>
 
-        {projectError && <p className="text-red-400 text-xs mb-3">{projectError.shortMessage || projectError.message}</p>}
-
-        <div className="flex gap-3">
-          <button
-            onClick={() => handleProjectTransfer(false)}
-            disabled={!project.transferable || projectPending || projectConfirming}
-            className="flex-1 py-3 bg-white/5 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold rounded-xl border border-white/10 transition-all text-sm"
-          >
-            {projectPending ? 'Confirm...' : projectConfirming ? 'Confirming...' : '🔒 Make Soulbound'}
-          </button>
-          <button
-            onClick={() => handleProjectTransfer(true)}
-            disabled={project.transferable || projectPending || projectConfirming}
-            className="flex-1 py-3 bg-sky-500/10 hover:bg-sky-500/20 disabled:opacity-40 disabled:cursor-not-allowed text-sky-400 font-semibold rounded-xl border border-sky-500/20 transition-all text-sm"
-          >
-            {projectPending ? 'Confirm...' : projectConfirming ? 'Confirming...' : '↔️ Make Transferable'}
-          </button>
-        </div>
-        {projectSuccess && <p className="text-green-400 text-sm mt-3 text-center">✓ Project transferability updated</p>}
-      </div>
-
-      <div className="border-t border-white/10" />
-
-      {/* Token-level override */}
-      <div>
-        <h3 className="font-['Syne'] text-lg font-700 text-white mb-1">Override Specific Token</h3>
-        <p className="text-white/40 text-sm mb-5">
-          Override transferability on a specific already-minted token. Look up a name below to pre-fill, or enter a token ID manually.
-        </p>
-
-        {/* Name lookup */}
-        <NameLookup projectId={projectId} projectSlug={project.slug} onSelect={id => setTokenId(id)} />
-
-        <div className="space-y-4">
-          <div>
-            <label className="text-sm text-white/60 mb-1 block">Token ID</label>
-            <input
-              type="number"
-              placeholder="e.g. 42"
-              value={tokenId}
-              onChange={e => setTokenId(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20"
-            />
-          </div>
-
-          <div>
-            <label className="text-sm text-white/60 mb-2 block">Set to</label>
-            <div className="flex gap-3">
+            <div className="radio-group" style={{ marginBottom: 16 }}>
               <button
-                onClick={() => setTokenTransferable(false)}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                  !tokenTransferable
-                    ? 'bg-white/10 border-white/30 text-white'
-                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white'
-                }`}
+                className={`radio-card${!project.transferable ? '' : ' is-active'}`}
+                onClick={() => handleProjectTransfer(true)}
+                disabled={project.transferable || projectPending || projectConfirming}
               >
-                🔒 Soulbound
+                <div className="radio-card-head">
+                  <span className="radio-dot" />
+                  <span className="radio-card-title">Transferable</span>
+                </div>
+                <div className="radio-card-desc">Standard ERC-721 — owners can transfer tokens between wallets.</div>
               </button>
               <button
-                onClick={() => setTokenTransferable(true)}
-                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                  tokenTransferable
-                    ? 'bg-sky-500/10 border-sky-500/30 text-sky-400'
-                    : 'bg-white/5 border-white/10 text-white/40 hover:text-white'
-                }`}
+                className={`radio-card${!project.transferable ? ' is-active' : ''}`}
+                onClick={() => handleProjectTransfer(false)}
+                disabled={!project.transferable || projectPending || projectConfirming}
               >
-                ↔️ Transferable
+                <div className="radio-card-head">
+                  <span className="radio-dot" />
+                  <span className="radio-card-title">Soulbound</span>
+                </div>
+                <div className="radio-card-desc">Identities are non-transferable. Recommended for KYC-bound tokens.</div>
               </button>
             </div>
+
+            {projectError && <p style={{ color: 'var(--bad)', fontSize: 12, marginBottom: 10 }}>{projectError.shortMessage || projectError.message}</p>}
+            {projectSuccess && <p style={{ color: 'var(--good)', fontSize: 12.5, marginBottom: 8 }}>✓ Project transferability updated</p>}
+
+            <span className="tag tag-neutral">
+              Currently: {project.transferable ? 'Transferable' : 'Soulbound'}
+            </span>
           </div>
+        </div>
 
-          {tokenError && <p className="text-red-400 text-xs">{tokenError.shortMessage || tokenError.message}</p>}
+        {/* Per-token override */}
+        <div className="card">
+          <div className="card-head">
+            <h3>Per-token override</h3>
+            <span className="meta">Override a specific token</span>
+          </div>
+          <div className="card-body">
+            <p style={{ fontSize: 13, color: 'var(--ink-3)', marginBottom: 14 }}>
+              Override transferability on a specific already-minted token. Look up a name to pre-fill, or enter a token ID manually.
+            </p>
 
-          <button
-            onClick={handleTokenTransfer}
-            disabled={!tokenId || tokenPending || tokenConfirming}
-            className="w-full py-3 bg-[#3d7fff] hover:bg-blue-500 disabled:bg-white/10 disabled:text-white/30 text-white font-semibold rounded-xl transition-all"
-          >
-            {tokenPending ? 'Confirm in wallet...' : tokenConfirming ? 'Confirming...' : 'Update Token'}
-          </button>
-          {tokenSuccess && <p className="text-green-400 text-sm text-center">✓ Token transferability updated</p>}
+            <NameLookup projectId={projectId} projectSlug={project.slug} onSelect={id => setTokenId(id)} />
+
+            <div className="field">
+              <label className="field-label">Token ID</label>
+              <div className="d-input mono">
+                <input type="number" placeholder="e.g. 42" value={tokenId} onChange={e => setTokenId(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="field-label">Set to</label>
+              <div className="radio-group">
+                <button className={`radio-card${!tokenTransferable ? ' is-active' : ''}`} onClick={() => setTokenTransferable(false)}>
+                  <div className="radio-card-head"><span className="radio-dot" /><span className="radio-card-title">Soulbound</span></div>
+                </button>
+                <button className={`radio-card${tokenTransferable ? ' is-active' : ''}`} onClick={() => setTokenTransferable(true)}>
+                  <div className="radio-card-head"><span className="radio-dot" /><span className="radio-card-title">Transferable</span></div>
+                </button>
+              </div>
+            </div>
+
+            {tokenError && <p style={{ color: 'var(--bad)', fontSize: 12, marginBottom: 10 }}>{tokenError.shortMessage || tokenError.message}</p>}
+
+            <button onClick={handleTokenTransfer} disabled={!tokenId || tokenPending || tokenConfirming} className="btn btn-primary btn-full" style={{ marginTop: 8 }}>
+              {tokenPending ? 'Confirm in wallet…' : tokenConfirming ? 'Confirming…' : 'Update token'}
+            </button>
+            {tokenSuccess && <p style={{ color: 'var(--good)', fontSize: 12.5, textAlign: 'center', marginTop: 8 }}>✓ Token transferability updated</p>}
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   )
 }

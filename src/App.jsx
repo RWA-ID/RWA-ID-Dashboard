@@ -1,174 +1,17 @@
-import { useState } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 import { modal } from './lib/wagmi'
 import ProjectList from './components/ProjectList'
 import ClaimPage from './components/ClaimPage'
 import Landing from './components/Landing'
 
-// Detect claim URL: ?claim={projectId}&proofs={cid}
 const _params = new URLSearchParams(window.location.search)
 const CLAIM_PROJECT_ID = _params.get('claim')
-const CLAIM_CID = _params.get('proofs')
-
-import NetworkEthereum from '@web3icons/react/icons/networks/NetworkEthereum'
-import NetworkBase from '@web3icons/react/icons/networks/NetworkBase'
-import NetworkPolygon from '@web3icons/react/icons/networks/NetworkPolygon'
-import NetworkOptimism from '@web3icons/react/icons/networks/NetworkOptimism'
-import NetworkArbitrumOne from '@web3icons/react/icons/networks/NetworkArbitrumOne'
-import NetworkAvalanche from '@web3icons/react/icons/networks/NetworkAvalanche'
-import NetworkLinea from '@web3icons/react/icons/networks/NetworkLinea'
-import NetworkCelo from '@web3icons/react/icons/networks/NetworkCelo'
-import NetworkGnosis from '@web3icons/react/icons/networks/NetworkGnosis'
-import NetworkAbstract from '@web3icons/react/icons/networks/NetworkAbstract'
-
-import WalletMetamask from '@web3icons/react/icons/wallets/WalletMetamask'
-import WalletTrust from '@web3icons/react/icons/wallets/WalletTrust'
-import WalletRainbow from '@web3icons/react/icons/wallets/WalletRainbow'
-import WalletCoinbase from '@web3icons/react/icons/wallets/WalletCoinbase'
-import WalletLedger from '@web3icons/react/icons/wallets/WalletLedger'
-import WalletTrezor from '@web3icons/react/icons/wallets/WalletTrezor'
-
-// ── Primitive components ───────────────────────────────────────────────────────
-
-function FingerprintSVG({ size = 24, color = '#3d7fff' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="13.5" r="1" fill={color} />
-      <path d="M10 14.5 C10 11 14 11 14 14.5" stroke={color} strokeWidth="1.3" />
-      <path d="M10 14.5 Q12 17 14 14.5" stroke={color} strokeWidth="1.3" />
-      <path d="M8 16 C8 8 16 8 16 16" stroke={color} strokeWidth="1.2" />
-      <path d="M8 16 Q12 19.5 16 16" stroke={color} strokeWidth="1.2" />
-      <path d="M6 17.5 C6 5 18 5 18 17.5" stroke={color} strokeWidth="1.1" />
-      <path d="M6 17.5 Q12 21.5 18 17.5" stroke={color} strokeWidth="1.1" />
-      <path d="M4 19.5 C4 2 20 2 20 19.5" stroke={color} strokeWidth="1" opacity="0.8" />
-      <path d="M4 19.5 Q12 23.5 20 19.5" stroke={color} strokeWidth="1" opacity="0.8" />
-      <path d="M2.5 21.5 C2.5 0 21.5 0 21.5 21.5" stroke={color} strokeWidth="0.9" opacity="0.5" />
-    </svg>
-  )
-}
-
-function UniswapWalletIcon({ size = 48 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <rect width="100" height="100" rx="22" fill="#FF007A" />
-      <path d="M35.5 28c-1.2.2-3.5 1.5-4.6 2.8-1.7 2-2.4 4.1-2.4 7.2 0 2.5.4 4 1.8 6.3 1 1.7 1 1.8.4 2.8-.8 1.4-1 3.5-.5 5.1.5 1.5 2.2 3.4 3.8 4.2l1.2.6-.3 1.3c-.5 2-.3 4.8.5 6.5 1 2.3 3.4 4.4 6.1 5.4 1.6.6 5.5.8 7.4.4 3.5-.8 6.6-3.4 7.8-6.6.4-.9.5-1.6.5-3.6 0-2.7-.4-4.2-1.6-5.7l-.7-.8.9-.5c2.3-1.4 3.7-4 3.7-7 0-2-.4-3.4-1.6-5.2-.7-1-1.9-2.2-2.3-2.2-.1 0-.1.3 0 .8.4 1.9.2 4.1-.5 5.7-.9 2.1-2.8 3.8-4.8 4.4l-.9.3-.4-.8c-.8-1.5-2.4-3.2-3.9-4.1-1-.6-1.1-.7-.8-1.1.8-1.4 1-3.8.4-5.6-.8-2.7-3-5-5.6-5.7-1.2-.3-3.6-.4-4.5-.1z" fill="white" />
-    </svg>
-  )
-}
-
-function SquaresBackground({ opacity = 0.035 }) {
-  return (
-    <div
-      className="absolute inset-0 pointer-events-none"
-      style={{
-        backgroundImage: `
-          linear-gradient(rgba(255,255,255,${opacity}) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255,255,255,${opacity}) 1px, transparent 1px)
-        `,
-        backgroundSize: '28px 28px',
-      }}
-    />
-  )
-}
-
-function SpanPill({ children, color = 'blue' }) {
-  const c = {
-    blue:  'border-blue-500/30 text-blue-300 bg-blue-500/10',
-    green: 'border-green-500/30 text-green-400 bg-green-500/10',
-    gray:  'border-white/10 text-white/40 bg-white/5',
-  }[color]
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium border ${c}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
-      {children}
-    </span>
-  )
-}
-
-function IconMarquee({ items, size = 48 }) {
-  const doubled = [...items, ...items]
-  return (
-    <div className="overflow-hidden w-full">
-      <div className="flex gap-4 animate-ticker-slow w-max">
-        {doubled.map(({ name, Icon }, i) => (
-          <div
-            key={i}
-            title={name}
-            className="flex-shrink-0 rounded-xl overflow-hidden ring-1 ring-white/8 hover:ring-white/20 transition-all"
-          >
-            {Icon ? <Icon size={size} variant="branded" /> : <UniswapWalletIcon size={size} />}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function CopyButton({ text }) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-  return (
-    <button
-      onClick={handleCopy}
-      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white/40 hover:text-white/70 text-[10px] transition-all"
-    >
-      {copied ? (
-        <>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          Copied
-        </>
-      ) : (
-        <>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" /><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" strokeWidth="1.5" /></svg>
-          Copy
-        </>
-      )}
-    </button>
-  )
-}
-
-// ── Data ───────────────────────────────────────────────────────────────────────
-
-const NETWORKS = [
-  { name: 'Ethereum',  Icon: NetworkEthereum },
-  { name: 'Base',      Icon: NetworkBase },
-  { name: 'Polygon',   Icon: NetworkPolygon },
-  { name: 'Optimism',  Icon: NetworkOptimism },
-  { name: 'Arbitrum',  Icon: NetworkArbitrumOne },
-  { name: 'Avalanche', Icon: NetworkAvalanche },
-  { name: 'Linea',     Icon: NetworkLinea },
-  { name: 'Celo',      Icon: NetworkCelo },
-  { name: 'Gnosis',    Icon: NetworkGnosis },
-  { name: 'Abstract',  Icon: NetworkAbstract },
-]
-
-const WALLETS = [
-  { name: 'MetaMask',        Icon: WalletMetamask },
-  { name: 'Trust Wallet',    Icon: WalletTrust },
-  { name: 'Rainbow',         Icon: WalletRainbow },
-  { name: 'Coinbase Wallet', Icon: WalletCoinbase },
-  { name: 'Ledger',          Icon: WalletLedger },
-  { name: 'Trezor',          Icon: WalletTrezor },
-  { name: 'Uniswap Wallet',  Icon: null },
-]
-
-const SNIPPET = `// Works with ethers.js, viem, wagmi
-const address = await client.getEnsAddress({
-  name: "joe.myproject.rwa-id.eth",
-  universalResolverAddress: "0x...",
-})`
-
-// ── App ────────────────────────────────────────────────────────────────────────
+const CLAIM_CID        = _params.get('proofs')
 
 export default function App() {
   const { address, isConnected } = useAccount()
   const { disconnect } = useDisconnect()
 
-  // Show claim page if URL has ?claim=&proofs= params
   if (CLAIM_PROJECT_ID && CLAIM_CID) {
     return <ClaimPage projectId={CLAIM_PROJECT_ID} cid={CLAIM_CID} />
   }
@@ -184,35 +27,66 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#0b1120] overflow-x-hidden">
-      <div className="relative" style={{ zIndex: 1 }}>
-      {/* Header */}
-      <header className="border-b border-white/5 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-            <FingerprintSVG size={22} />
+    <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* ── Top bar ── */}
+      <header style={{
+        borderBottom: '1px solid var(--line)',
+        background: 'var(--paper)',
+      }}>
+        <div style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          padding: '14px 32px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 28,
+        }}>
+          {/* Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: 'var(--ink)', color: 'var(--paper)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontFamily: 'var(--f-display)', fontWeight: 600, fontSize: 14,
+              letterSpacing: '-.02em',
+            }}>R</span>
+            <span style={{
+              fontFamily: 'var(--f-display)', fontWeight: 600,
+              fontSize: 18, letterSpacing: '-.015em', color: 'var(--ink)',
+            }}>
+              RWA-ID
+              <span style={{ color: 'var(--ink-4)', fontWeight: 500, padding: '0 4px' }}>/</span>
+              <span style={{ color: 'var(--ink-3)', fontWeight: 500 }}>Console</span>
+            </span>
           </div>
-          <span className="font-['Syne'] font-800 text-lg text-white tracking-tight">
-            RWA-ID <span className="text-[#3d7fff]">Dashboard</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-white/40 font-mono hidden sm:block">
-            {address?.slice(0, 6)}...{address?.slice(-4)}
-          </span>
-          <button
-            onClick={handleDisconnect}
-            className="px-4 py-2 text-sm border border-white/10 rounded-lg text-white/50 hover:border-white/20 hover:text-white transition-all"
-          >
-            Disconnect
-          </button>
+
+          {/* Wallet + disconnect */}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px 6px 6px', borderRadius: 999,
+              background: 'var(--ink)', color: 'var(--paper)',
+              fontFamily: 'var(--f-mono)', fontSize: 12,
+            }}>
+              <span style={{
+                width: 22, height: 22, borderRadius: '50%',
+                background: 'linear-gradient(135deg, #4d7ce8, #c46cff 50%, #ffba6c)',
+                flexShrink: 0,
+              }} />
+              {address?.slice(0, 6)}…{address?.slice(-4)}
+            </span>
+            <button
+              onClick={handleDisconnect}
+              className="btn btn-sm"
+            >
+              Disconnect
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-12">
-        <ProjectList address={address} />
-      </main>
-      </div>
+      {/* ── Content ── */}
+      <ProjectList address={address} />
     </div>
   )
 }

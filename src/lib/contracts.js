@@ -1,4 +1,29 @@
 export const RWAID_ADDRESS = '0xD0B565C7134bDB16Fc3b8A9Cb5fdA003C37930c2'
+export const USDC_ADDRESS  = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+
+export const USDC_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    name: 'balanceOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'account', type: 'address' }],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+]
 
 export const RWAID_ABI = [
   // ── View ────────────────────────────────────────────────────────────────
@@ -79,6 +104,38 @@ export const RWAID_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'tokenId', type: 'uint256' }],
     outputs: [{ name: '', type: 'address' }],
+  },
+  // ── Claim ────────────────────────────────────────────────────────────────
+  {
+    name: 'claim',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'projectId', type: 'uint256' },
+      { name: 'nameHash_', type: 'bytes32' },
+      { name: 'proof', type: 'bytes32[]' },
+    ],
+    outputs: [],
+  },
+  {
+    name: 'claimed',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'projectId', type: 'uint256' }, { name: 'claimer', type: 'address' }],
+    outputs: [{ name: '', type: 'bool' }],
+  },
+  // ── Project Creation ─────────────────────────────────────────────────────
+  {
+    name: 'createProject',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'slug', type: 'string' },
+      { name: 'treasury', type: 'address' },
+      { name: 'claimFee', type: 'uint256' },
+      { name: 'transferable', type: 'bool' },
+    ],
+    outputs: [{ name: 'projectId', type: 'uint256' }],
   },
   // ── Project Owner Actions ────────────────────────────────────────────────
   {
@@ -167,6 +224,15 @@ export const RWAID_ABI = [
     outputs: [],
   },
   // ── Events ────────────────────────────────────────────────────────────────
+  {
+    name: 'MerkleRootUpdated',
+    type: 'event',
+    inputs: [
+      { name: 'projectId',        type: 'uint256', indexed: true },
+      { name: 'newRoot',          type: 'bytes32', indexed: false },
+      { name: 'totalAllowlisted', type: 'uint256', indexed: false },
+    ],
+  },
   {
     name: 'ProjectCreated',
     type: 'event',

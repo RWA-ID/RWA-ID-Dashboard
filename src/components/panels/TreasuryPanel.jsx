@@ -7,59 +7,58 @@ export default function TreasuryPanel({ projectId, project, onRefresh }) {
   const [newTreasury, setNewTreasury] = useState('')
 
   const { writeContract, data: hash, isPending, error } = useWriteContract()
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash })
+  const { isLoading: isConfirming, isSuccess }          = useWaitForTransactionReceipt({ hash })
 
   useEffect(() => { if (isSuccess) onRefresh() }, [isSuccess])
 
   const isValid = isAddress(newTreasury)
 
   const handleSubmit = () => {
-    writeContract({
-      address: RWAID_ADDRESS,
-      abi: RWAID_ABI,
-      functionName: 'updateTreasury',
-      args: [BigInt(projectId), newTreasury],
-    })
+    writeContract({ address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'updateTreasury',
+      args: [BigInt(projectId), newTreasury] })
   }
 
   return (
-    <div>
-      <h3 className="font-['Syne'] text-lg font-700 text-white mb-1">Update Treasury</h3>
-      <p className="text-white/40 text-sm mb-6">
-        Change the address that receives 70% of claim fees for this project.
+    <section className="section">
+      <h2 className="section-title">Treasury</h2>
+      <p className="section-desc">
+        The treasury address receives 70% of every claim fee. Change it here — all future claim fees will route to the new address. Existing balances are unaffected.
       </p>
 
-      <div className="space-y-4">
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">Current Treasury</label>
-          <p className="text-white/50 text-sm font-mono bg-white/5 rounded-lg px-3 py-2 break-all">
-            {project.treasury}
-          </p>
+      <div className="card" style={{ maxWidth: 560 }}>
+        <div className="card-head"><h3>Update treasury address</h3><span className="meta">Receives 70% of claim fees</span></div>
+        <div className="card-body">
+          <div className="field">
+            <span className="field-label">Current treasury</span>
+            <div className="d-input mono disabled">
+              <input type="text" value={project.treasury} disabled style={{ color: 'var(--ink-2)' }} />
+            </div>
+          </div>
+
+          <div className="field">
+            <label className="field-label">New treasury address</label>
+            <div className="d-input mono">
+              <input
+                type="text"
+                placeholder="0x…"
+                value={newTreasury}
+                onChange={e => setNewTreasury(e.target.value)}
+              />
+            </div>
+            {newTreasury && !isValid && (
+              <span style={{ color: 'var(--bad)', fontSize: 12 }}>Enter a valid Ethereum address</span>
+            )}
+            <span className="field-hint">All future claim fees will route to this address. Existing balances are unaffected.</span>
+          </div>
+
+          {error && <p style={{ color: 'var(--bad)', fontSize: 12, marginBottom: 12 }}>{error.shortMessage || error.message}</p>}
+
+          <button onClick={handleSubmit} disabled={!isValid || isPending || isConfirming} className="btn btn-primary btn-full">
+            {isPending ? 'Confirm in wallet…' : isConfirming ? 'Confirming…' : 'Update treasury'}
+          </button>
+          {isSuccess && <p style={{ color: 'var(--good)', fontSize: 12.5, textAlign: 'center', marginTop: 8 }}>✓ Treasury updated</p>}
         </div>
-
-        <div>
-          <label className="text-sm text-white/60 mb-1 block">New Treasury Address</label>
-          <input
-            type="text"
-            placeholder="0x..."
-            value={newTreasury}
-            onChange={e => setNewTreasury(e.target.value)}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-sm font-mono outline-none focus:border-blue-500/50 transition-all placeholder:text-white/20"
-          />
-          {newTreasury && !isValid && <p className="text-red-400 text-xs mt-1">Enter a valid Ethereum address</p>}
-        </div>
-
-        {error && <p className="text-red-400 text-xs">{error.shortMessage || error.message}</p>}
-
-        <button
-          onClick={handleSubmit}
-          disabled={!isValid || isPending || isConfirming}
-          className="w-full py-3 bg-[#3d7fff] hover:bg-blue-500 disabled:bg-white/10 disabled:text-white/30 text-white font-semibold rounded-xl transition-all"
-        >
-          {isPending ? 'Confirm in wallet...' : isConfirming ? 'Confirming...' : 'Update Treasury'}
-        </button>
-        {isSuccess && <p className="text-green-400 text-sm text-center">✓ Treasury updated</p>}
       </div>
-    </div>
+    </section>
   )
 }
