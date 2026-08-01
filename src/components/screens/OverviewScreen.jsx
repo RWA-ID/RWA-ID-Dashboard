@@ -1,24 +1,40 @@
 import { useEffect, useState } from 'react'
 import { RWAID_ADDRESS } from '../../lib/contracts'
 import { fetchActivity } from '../../lib/useProjects'
-import { loadAllowlist } from '../../lib/allowlistStore'
+import { claimUrl } from '../../lib/allowlistStore'
+import { useProofSet } from '../../lib/useProofSet'
 import {
   effectiveFee, num, pct, relativeTime, shortAddress, shortHash, usd, usdCompact, ZERO_ROOT,
 } from '../../lib/format'
-import { ChevronRight, Coin, List, Search, Warning } from '../icons'
+import { ChevronRight, Coin, Copy, External, List, Search, Warning } from '../icons'
 
 export default function OverviewScreen({ project, projectId, go }) {
   const [activity, setActivity] = useState(null)
-  const saved = loadAllowlist(projectId)
+  const [activityError, setActivityError] = useState('')
+  const [copied, setCopied] = useState(false)
+  const { proofSet: saved, state: proofState } = useProofSet(project, projectId)
 
   useEffect(() => {
     let cancelled = false
     setActivity(null)
+    setActivityError('')
     fetchActivity(projectId)
       .then(rows => { if (!cancelled) setActivity(rows) })
-      .catch(() => { if (!cancelled) setActivity([]) })
+      .catch(err => {
+        if (cancelled) return
+        setActivity([])
+        setActivityError(err.message || 'Could not read contract events.')
+      })
     return () => { cancelled = true }
   }, [projectId])
+
+  const copyClaim = async () => {
+    try {
+      await navigator.clipboard.writeText(claimUrl(projectId, saved.cid))
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2200)
+    } catch { /* clipboard blocked — the link is reachable from the Allowlist screen */ }
+  }
 
   const claimed     = Number(project.totalClaimed)
   const allowlisted = project.allowlisted
@@ -99,7 +115,9 @@ export default function OverviewScreen({ project, projectId, go }) {
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
               {allowlisted == null ? (
                 <p className="body">
-                  Publish an allowlist to see how many of your clients have claimed.
+                  {hasRoot
+                    ? 'A root is live, but the allowlist size could not be read from contract events. Retry from the topbar.'
+                    : 'Publish an allowlist to see how many of your clients have claimed.'}
                 </p>
               ) : (
                 <>
@@ -130,6 +148,13 @@ export default function OverviewScreen({ project, projectId, go }) {
             </div>
             {activity === null ? (
               <div className="card-body row"><span className="spinner" /><span className="mono-note">Scanning logs…</span></div>
+            ) : activityError ? (
+              <div className="card-body">
+                <div className="notice notice-warn">
+                  <Warning size={14} />
+                  <span>Could not read contract events, so this feed is incomplete. {activityError}</span>
+                </div>
+              </div>
             ) : activity.length === 0 ? (
               <div className="card-body"><p className="body">No onchain activity for this project yet.</p></div>
             ) : (
@@ -139,7 +164,9 @@ export default function OverviewScreen({ project, projectId, go }) {
                   <span style={{ flex: 1, minWidth: 0 }}>
                     {a.kind === 'claim' ? (
                       <>
-                        <span className="act-title">Identity claimed — token #{a.tokenId}</span>
+                        <span className="act-title">
+                          {a.label ? `${a.label}.${project.slug}.rwa-id.eth` : `Identity claimed — token #${a.tokenId}`}
+                        </span>
                         <span className="act-meta">
                           {shortAddress(a.claimer)} · fee {usd(a.feePaid)}
                         </span>
@@ -188,7 +215,11 @@ export default function OverviewScreen({ project, projectId, go }) {
                       {saved.cid.slice(0, 10)}…
                     </a>
                   ) : (
-                    <span className="kv-val" style={{ color: 'var(--mute-3)' }}>not on this device</span>
+                    <span className="kv-val" style={{ color: 'var(--mute-3)' }}>
+                      {proofState === 'loading' ? 'locating…'
+                        : proofState === 'idle' ? 'no root published'
+                        : 'none matches live root'}
+                    </span>
                   )}
                 </div>
                 <div className="kv-row">
@@ -204,6 +235,27 @@ export default function OverviewScreen({ project, projectId, go }) {
               </div>
             </div>
           </div>
+
+          {/* Claim link */}
+          {saved?.cid && (
+            <div className="card">
+              <div className="card-head">
+                Claim link
+                <span className="head-meta">send this to clients</span>
+              </div>
+              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                <span className="claim-url">{claimUrl(projectId, saved.cid)}</span>
+                <div className="row row-wrap">
+                  <button className="btn btn-ink btn-sm" onClick={copyClaim}>
+                    <Copy size={12} />{copied ? 'Copied' : 'Copy link'}
+                  </button>
+                  <a className="btn btn-sm" href={claimUrl(projectId, saved.cid)} target="_blank" rel="noreferrer">
+                    <External size={12} />Open
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Next actions */}
           <div className="card">

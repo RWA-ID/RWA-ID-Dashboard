@@ -25,6 +25,9 @@ export const IDENTITY_CLAIMED = {
     { name: 'tokenId',   type: 'uint256', indexed: false },
     { name: 'node',      type: 'bytes32', indexed: false },
     { name: 'feePaid',   type: 'uint256', indexed: false },
+    // v3 emits the plaintext label, so activity can name the identity without
+    // fetching the proof set to reverse the hash.
+    { name: 'label',     type: 'string',  indexed: false },
   ],
 }
 
@@ -42,11 +45,13 @@ export function useProjects(address) {
   const [projects, setProjects] = useState([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
+  const [logError, setLogError] = useState('')
 
   const load = useCallback(async () => {
     if (!address) { setProjects([]); setLoading(false); return }
     setLoading(true)
     setError('')
+    setLogError('')
     try {
       const nextId = await readClient.readContract({
         address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'nextProjectId',
@@ -65,26 +70,33 @@ export function useProjects(address) {
         .filter(p => p && p.owner?.toLowerCase() === address.toLowerCase())
 
       // Allowlist size only exists in the MerkleRootUpdated event, not in storage.
-      const withCounts = await Promise.all(owned.map(async (p) => {
-        try {
-          const logs = await getLogsChunked({
-            address: RWAID_ADDRESS,
-            event: MERKLE_ROOT_UPDATED,
-            args: { projectId: BigInt(p.id) },
-          })
-          const last = logs[logs.length - 1]
-          return {
-            ...p,
-            allowlisted: last ? Number(last.args.totalAllowlisted) : null,
-            rootBlock:   last ? last.blockNumber : null,
-            rootUpdates: logs.length,
-          }
-        } catch {
-          return { ...p, allowlisted: null, rootBlock: null, rootUpdates: 0 }
+      // One unfiltered scan covers every project — far cheaper than a scan each.
+      let byProject = null
+      try {
+        const logs = await getLogsChunked({ address: RWAID_ADDRESS, event: MERKLE_ROOT_UPDATED })
+        byProject = new Map()
+        for (const l of logs) {
+          const id = Number(l.args.projectId)
+          const seen = byProject.get(id) ?? []
+          seen.push(l)
+          byProject.set(id, seen)
+        }
+      } catch (err) {
+        // Counts stay unknown rather than silently reading as zero.
+        setLogError(err.message || 'Could not read contract events.')
+      }
+
+      setProjects(owned.map((p) => {
+        if (!byProject) return { ...p, allowlisted: null, rootBlock: null, rootUpdates: null }
+        const logs = byProject.get(p.id) ?? []
+        const last = logs[logs.length - 1]
+        return {
+          ...p,
+          allowlisted: last ? Number(last.args.totalAllowlisted) : null,
+          rootBlock:   last ? last.blockNumber : null,
+          rootUpdates: logs.length,
         }
       }))
-
-      setProjects(withCounts)
     } catch (err) {
       setError(err.shortMessage || err.message || 'Failed to load projects')
     } finally {
@@ -94,7 +106,7 @@ export function useProjects(address) {
 
   useEffect(() => { load() }, [load])
 
-  return { projects, loading, error, reload: load }
+  return { projects, loading, error, logError, reload: load }
 }
 
 /** Recent onchain activity for one project, newest first. */
@@ -112,6 +124,7 @@ export async function fetchActivity(projectId, limit = 6) {
       tokenId: l.args.tokenId?.toString(),
       claimer: l.args.claimer,
       feePaid: l.args.feePaid,
+      label: l.args.label,
     })),
     ...roots.map(l => ({
       kind: 'root',

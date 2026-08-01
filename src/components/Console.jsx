@@ -6,7 +6,7 @@ import { useProjects } from '../lib/useProjects'
 import { initials, shortAddress } from '../lib/format'
 import {
   ChevronUpDown, Coin, Disconnect, External, Grid, Help,
-  List, Lock, Pause, Person, Refresh, Search, Vault,
+  List, Lock, Pause, Person, Refresh, Search, Vault, Warning,
 } from './icons'
 
 import ProjectsScreen    from './screens/ProjectsScreen'
@@ -46,7 +46,7 @@ const CRUMBS = {
 
 export default function Console({ address }) {
   const { disconnect } = useDisconnect()
-  const { projects, loading, error, reload } = useProjects(address)
+  const { projects, loading, error, logError, reload } = useProjects(address)
 
   const [screen, setScreen]   = useState('projects')
   const [pid, setPid]         = useState(null)
@@ -257,6 +257,15 @@ export default function Console({ address }) {
 
         <div className="console-content">
           <div className="console-inner" key={`${screen}-${pid}-${freshness}`}>
+            {logError && (
+              <div className="notice notice-warn" style={{ marginBottom: 20 }}>
+                <Warning size={15} />
+                <span>
+                  Contract events are unavailable, so allowlist counts and activity are missing.
+                  Storage-backed figures (claims, revenue, fees) are unaffected. {logError}
+                </span>
+              </div>
+            )}
             {renderScreen()}
           </div>
         </div>

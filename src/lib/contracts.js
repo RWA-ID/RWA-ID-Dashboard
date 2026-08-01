@@ -1,4 +1,6 @@
-export const RWAID_ADDRESS = '0xD0B565C7134bDB16Fc3b8A9Cb5fdA003C37930c2'
+// RWAIDv3 — deployed 2026-08-01 at block 25661280, owner is the protocol Safe.
+// v2 (superseded, metadata-less): 0xD0B565C7134bDB16Fc3b8A9Cb5fdA003C37930c2
+export const RWAID_ADDRESS = '0x6413e9E6A0D4e05557463A66C34E18192324A2C7'
 export const USDC_ADDRESS  = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
 
 export const USDC_ABI = [
@@ -61,7 +63,24 @@ export const RWAID_ABI = [
       { name: 'projectId', type: 'uint256' },
       { name: 'nameHash', type: 'bytes32' },
       { name: 'claimedAt', type: 'uint256' },
+      { name: 'label', type: 'string' },
     ],
+  },
+  {
+    // Onchain-rendered metadata — v2 had no tokenURI at all, which is why
+    // identities showed on marketplaces as untitled, imageless "RWA ID #n".
+    name: 'tokenURI',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
+  },
+  {
+    name: 'fullName',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'tokenId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'string' }],
   },
   {
     name: 'minimumClaimFee',
@@ -107,12 +126,15 @@ export const RWAID_ABI = [
   },
   // ── Claim ────────────────────────────────────────────────────────────────
   {
+    // v3 takes the label itself and derives the hash onchain, so the minted
+    // token can be named. The Merkle leaf is unchanged, so proof sets built
+    // for v2 still verify.
     name: 'claim',
     type: 'function',
     stateMutability: 'nonpayable',
     inputs: [
       { name: 'projectId', type: 'uint256' },
-      { name: 'nameHash_', type: 'bytes32' },
+      { name: 'label', type: 'string' },
       { name: 'proof', type: 'bytes32[]' },
     ],
     outputs: [],
@@ -255,6 +277,7 @@ export const RWAID_ABI = [
       { name: 'tokenId', type: 'uint256', indexed: false },
       { name: 'node', type: 'bytes32', indexed: false },
       { name: 'feePaid', type: 'uint256', indexed: false },
+      { name: 'label', type: 'string', indexed: false },
     ],
   },
 ]
