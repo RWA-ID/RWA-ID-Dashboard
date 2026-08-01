@@ -614,6 +614,10 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
   flex: none;
   position: sticky;
   top: 0;
+  /* `position: sticky` makes this a stacking context, so the switcher popover's
+     own z-index is scoped to it. Without a z-index here the whole sidebar paints
+     under .switcher-scrim and the scrim swallows clicks on the project list. */
+  z-index: 20;
   height: 100vh;
   display: flex;
   flex-direction: column;

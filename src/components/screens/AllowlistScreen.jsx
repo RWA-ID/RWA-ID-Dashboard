@@ -1,18 +1,23 @@
 import { useMemo, useRef, useState } from 'react'
 import { isAddress } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
-import { parseCSV, buildMerkleTree } from '../../lib/merkle'
+import { parseCSV, buildMerkleTree, normalizeLabel } from '../../lib/merkle'
 import { pinJSON } from '../../lib/pinata'
-import { claimUrl, loadAllowlist, saveAllowlist } from '../../lib/allowlistStore'
+import { claimUrl, fetchProofSet, proofSetName, saveAllowlist } from '../../lib/allowlistStore'
+import { useProofSet } from '../../lib/useProofSet'
 import { num, shortHash, ZERO_ROOT } from '../../lib/format'
 import TxDrawer, { useTx } from '../TxDrawer'
 import { ArrowRight, Check, Close, Copy, Plus, Upload, Warning } from '../icons'
 
-const IPFS_GATEWAYS = [
-  cid => `https://ipfs.io/ipfs/${cid}`,
-  cid => `https://dweb.link/ipfs/${cid}`,
-  cid => `https://gateway.pinata.cloud/ipfs/${cid}`,
-]
+const PROOF_META = {
+  local:             'verified · matches live root',
+  pinata:            'recovered from IPFS · matches live root',
+  'local-unverified': 'local record · could not verify',
+  loading:           'looking it up…',
+  missing:           'no pinned set matches the live root',
+  error:             'lookup failed',
+  idle:              'no root published',
+}
 
 export default function AllowlistScreen({ project, projectId, refresh }) {
   const [mode, setMode] = useState('csv')
@@ -26,15 +31,21 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
   const [dragging, setDragging] = useState(false)
   const [copied, setCopied]   = useState(false)
   const [drawer, setDrawer]   = useState(false)
-  const [saved, setSaved]     = useState(() => loadAllowlist(projectId))
+
+  const { proofSet: saved, state: proofState, error: proofError, override: setSaved } =
+    useProofSet(project, projectId)
 
   const fileRef = useRef(null)
   const tx = useTx()
 
   const hasRoot = project.merkleRoot && project.merkleRoot !== ZERO_ROOT
 
+  const isValidLabel = (name) => {
+    try { normalizeLabel(name); return true } catch { return false }
+  }
+
   const validRows = useMemo(
-    () => rows.filter(r => r.name.trim() && isAddress(r.wallet.trim())),
+    () => rows.filter(r => isValidLabel(r.name) && isAddress(r.wallet.trim())),
     [rows],
   )
 
@@ -66,32 +77,29 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
   }
 
   /* ── Extend from an existing pinned proof set ─────────────────────────── */
-  const loadFromIpfs = async () => {
-    const cid = cidInput.trim()
+  const loadCid = async (cid) => {
     if (!cid) return
     setLoadingCid(true)
     setCidState({ tone: '', text: 'Fetching proof set…' })
-    for (const gw of IPFS_GATEWAYS) {
-      try {
-        const res = await fetch(gw(cid))
-        if (!res.ok) continue
-        const data = await res.json()
-        const existing = (data.entries || []).map(e => ({
-          name: e.name || '',
-          wallet: e.wallet || e.address || '',
-        }))
-        if (existing.length === 0) throw new Error('That proof set has no entries.')
-        setRows([...existing, { name: '', wallet: '' }])
-        setMode('manual')
-        resetStaging()
-        setCidState({ tone: 'hint-good', text: `Loaded ${num(existing.length)} existing entries — new rows will be appended.` })
-        setLoadingCid(false)
-        return
-      } catch { /* try the next gateway */ }
+    try {
+      const data = await fetchProofSet(cid)
+      const existing = (data.entries || []).map(e => ({
+        name: e.name || '',
+        wallet: e.wallet || e.address || '',
+      }))
+      if (existing.length === 0) throw new Error('That proof set has no entries.')
+      setRows([...existing, { name: '', wallet: '' }])
+      setMode('manual')
+      resetStaging()
+      setCidState({ tone: 'hint-good', text: `Loaded ${num(existing.length)} existing entries — new rows will be appended.` })
+    } catch (err) {
+      setCidState({ tone: 'hint-danger', text: err.message || 'Could not fetch that CID.' })
+    } finally {
+      setLoadingCid(false)
     }
-    setCidState({ tone: 'hint-danger', text: 'Could not fetch that CID from any gateway.' })
-    setLoadingCid(false)
   }
+
+  const loadFromIpfs = () => loadCid(cidInput.trim())
 
   /* ── Build + pin ──────────────────────────────────────────────────────── */
   const buildAndPin = async () => {
@@ -112,11 +120,11 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
         entries: entries.map(e => ({
           name: e.name, wallet: e.address, nameHash: e.nameHash, leaf: e.leaf, proof: e.proof,
         })),
-      }, `rwa-id-${project.slug}-allowlist`)
+      }, proofSetName(project.slug))
 
+      // Not cached yet: this CID only becomes the project's proof set once the
+      // staged root is confirmed onchain (see the drawer's onDone).
       setStaged({ root, entries, cid })
-      setSaved({ cid, total: entries.length })
-      saveAllowlist(projectId, cid, entries.length)
     } catch (err) {
       setError(err.message || 'Could not build or pin the allowlist.')
     } finally {
@@ -150,7 +158,9 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
     return count
   }, [validRows])
 
-  const invalidCount = rows.filter(r => (r.name.trim() || r.wallet.trim()) && !isAddress(r.wallet.trim())).length
+  const invalidCount = rows.filter(
+    r => (r.name.trim() || r.wallet.trim()) && (!isAddress(r.wallet.trim()) || !isValidLabel(r.name)),
+  ).length
   const linkCid = staged?.cid || saved?.cid
 
   return (
@@ -181,9 +191,9 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
           <div className="stat-value data">
             {saved?.cid ? (
               <a href={`https://ipfs.io/ipfs/${saved.cid}`} target="_blank" rel="noreferrer">{saved.cid.slice(0, 14)}…</a>
-            ) : '—'}
+            ) : proofState === 'loading' ? <span className="spinner" /> : '—'}
           </div>
-          <div className="stat-meta">{saved?.cid ? 'pinned · IPFS' : 'no local record'}</div>
+          <div className="stat-meta">{PROOF_META[saved ? saved.source : proofState] ?? ''}</div>
         </div>
       </div>
 
@@ -296,7 +306,7 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
                 Load your current proof set from IPFS so new rows are appended instead of replacing everyone
                 already allowlisted.
               </p>
-              <div className="row" style={{ maxWidth: 520 }}>
+              <div className="row row-wrap" style={{ maxWidth: 520 }}>
                 <div className="input-shell" style={{ flex: 1 }}>
                   <input id="al-cid" value={cidInput} onChange={(e) => setCidInput(e.target.value)}
                     placeholder="bafybe…" style={{ fontSize: 13 }} />
@@ -304,6 +314,11 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
                 <button className="btn" onClick={loadFromIpfs} disabled={!cidInput.trim() || loadingCid}>
                   {loadingCid ? 'Loading…' : 'Load'}
                 </button>
+                {saved?.cid && (
+                  <button className="btn" onClick={() => { setCidInput(saved.cid); loadCid(saved.cid) }} disabled={loadingCid}>
+                    Use live set
+                  </button>
+                )}
               </div>
               {cidState.text && <div className={`hint ${cidState.tone}`}>{cidState.text}</div>}
             </div>
@@ -379,24 +394,46 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
       </div>
 
       {/* ── Claim link ── */}
-      {linkCid && (
+      {(linkCid || (hasRoot && proofState !== 'idle')) && (
         <div className="card mt-20">
           <div className="card-head">
             Claim link
             <span className="head-meta">
-              {num(staged?.entries.length ?? saved?.total ?? 0)} allowlisted
+              {linkCid ? `${num(staged?.entries.length ?? saved?.total ?? 0)} allowlisted` : 'this is the page you send clients'}
             </span>
           </div>
-          <div className="card-body row row-wrap" style={{ gap: 12 }}>
-            <span className="claim-url">{claimUrl(projectId, linkCid)}</span>
-            <button className="btn btn-ink" onClick={() => copyClaimLink(linkCid)}>
-              {copied ? <><Check size={13} />Copied</> : <><Copy size={13} />Copy link</>}
-            </button>
-          </div>
-          {staged && (
+
+          {linkCid ? (
+            <div className="card-body row row-wrap" style={{ gap: 12 }}>
+              <span className="claim-url">{claimUrl(projectId, linkCid)}</span>
+              <button className="btn btn-ink" onClick={() => copyClaimLink(linkCid)}>
+                {copied ? <><Check size={13} />Copied</> : <><Copy size={13} />Copy link</>}
+              </button>
+              <a className="btn" href={claimUrl(projectId, linkCid)} target="_blank" rel="noreferrer">
+                Open claim page
+              </a>
+            </div>
+          ) : proofState === 'loading' ? (
+            <div className="card-body row"><span className="spinner" /><span className="mono-note">Locating the proof set…</span></div>
+          ) : (
+            <div className="card-body">
+              <div className="notice notice-warn">
+                <Warning size={14} />
+                <span>
+                  {proofState === 'error'
+                    ? proofError
+                    : 'No pinned proof set matches the root this project is enforcing, so the claim link cannot be rebuilt. Re-publish the allowlist below, or paste the CID under “Extend the existing tree” to restore it.'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {(staged || saved?.source === 'local-unverified') && (
             <div className="card-foot">
               <span className="mono-note">
-                This link only works once the staged root is confirmed onchain.
+                {staged
+                  ? 'This link only works once the staged root is confirmed onchain.'
+                  : 'This CID came from local storage and could not be verified against the live root.'}
               </span>
             </div>
           )}
@@ -418,7 +455,14 @@ export default function AllowlistScreen({ project, projectId, refresh }) {
         fn="updateMerkleRoot(uint256,bytes32,uint256)"
         ctaLabel="Sign in wallet"
         onSign={sign}
-        onDone={() => { setStaged(null); refresh() }}
+        onDone={() => {
+          if (staged) {
+            saveAllowlist(projectId, staged.cid, staged.entries.length, staged.root)
+            setSaved({ cid: staged.cid, total: staged.entries.length, root: staged.root, source: 'local' })
+          }
+          setStaged(null)
+          refresh()
+        }}
       />
     </div>
   )

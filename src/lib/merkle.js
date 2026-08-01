@@ -13,6 +13,24 @@ export function computeNameHash(name) {
   return keccak256(toBytes(name))
 }
 
+/**
+ * Labels must be lowercase [a-z0-9-_].
+ *
+ * The CCIP-Read gateway lowercases a name before hashing it, so a label
+ * allowlisted as "Zac" hashes to a different node than the "zac" ENS asks for —
+ * it mints fine and then never resolves. Normalizing here keeps the allowlist,
+ * the claim and ENS resolution pointing at the same node.
+ */
+export function normalizeLabel(name) {
+  const label = String(name).trim().toLowerCase()
+  if (!label) throw new Error('name is empty')
+  if (label.length > 63) throw new Error(`"${label}" is longer than 63 characters`)
+  if (!/^[a-z0-9_-]+$/.test(label)) {
+    throw new Error(`"${name}" has characters that are not allowed — use a-z, 0-9, hyphen or underscore`)
+  }
+  return label
+}
+
 // Compute leaf = keccak256(abi.encodePacked(claimer, nameHash))
 export function computeLeaf(address, nameHash) {
   return keccak256(encodePacked(['address', 'bytes32'], [getAddress(address), nameHash]))
@@ -35,14 +53,18 @@ export function parseCSV(text) {
     const name = col0
     const wallet = col1
 
-    if (!name) {
-      throw new Error(`Row ${i + 1}: name is empty`)
-    }
     if (!wallet.startsWith('0x') || wallet.length !== 42) {
       throw new Error(`Row ${i + 1}: "${wallet}" is not a valid Ethereum address`)
     }
 
-    rows.push({ address: wallet, name })
+    let label
+    try {
+      label = normalizeLabel(name)
+    } catch (err) {
+      throw new Error(`Row ${i + 1}: ${err.message}`)
+    }
+
+    rows.push({ address: wallet, name: label })
   }
 
   if (rows.length === 0) throw new Error('CSV has no valid rows')
@@ -53,9 +75,11 @@ export function parseCSV(text) {
 // Returns { tree, root, entries } where entries include the proof for each address.
 export function buildMerkleTree(rows) {
   const entries = rows.map(({ address, name }) => {
-    const nameHash = computeNameHash(name)
+    // The normalized label is what gets hashed, claimed and resolved.
+    const label = normalizeLabel(name)
+    const nameHash = computeNameHash(label)
     const leaf = computeLeaf(address, nameHash)
-    return { address: getAddress(address), name, nameHash, leaf }
+    return { address: getAddress(address), name: label, nameHash, leaf }
   })
 
   const leafBuffers = entries.map(e => Buffer.from(e.leaf.slice(2), 'hex'))
