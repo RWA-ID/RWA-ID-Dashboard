@@ -1,8 +1,6 @@
-// RWAIDv3. Set this to the deployed address before shipping this branch —
-// `npx hardhat run scripts/deploy-v3.js --network mainnet` prints it, along with
-// the block to use for CONTRACT_START_BLOCK in readClient.js.
+// RWAIDv3 — deployed 2026-08-01 at block 25661280, owner is the protocol Safe.
 // v2 (superseded, metadata-less): 0xD0B565C7134bDB16Fc3b8A9Cb5fdA003C37930c2
-export const RWAID_ADDRESS = import.meta.env.VITE_RWAID_ADDRESS || '0x0000000000000000000000000000000000000000'
+export const RWAID_ADDRESS = '0x6413e9E6A0D4e05557463A66C34E18192324A2C7'
 export const USDC_ADDRESS  = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
 
 export const USDC_ABI = [

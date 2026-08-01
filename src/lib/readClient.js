@@ -1,10 +1,9 @@
 import { createPublicClient, fallback, http } from 'viem'
 import { mainnet } from 'viem/chains'
 
-// Block at which the RWA-ID contract first had activity.
-// Narrows getLogs queries to avoid scanning irrelevant history.
-// Set this to the RWAIDv3 deployment block — deploy-v3.js prints it.
-export const CONTRACT_START_BLOCK = 24_540_000n
+// RWAIDv3 deployment block. Narrows getLogs queries to avoid scanning
+// irrelevant history — there is nothing to find before the contract existed.
+export const CONTRACT_START_BLOCK = 25_661_280n
 
 /**
  * Endpoints used for eth_call / multicall. Any node serves these, so this list
