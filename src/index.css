@@ -810,12 +810,181 @@ button { background: none; border: 0; padding: 0; cursor: pointer }
   transition: background .15s;
 }
 .claim-bar-btn:hover { background: rgba(255,255,255,.06) }
+.claim-bar-ns { font: 400 12px/1 var(--f-mono); color: rgba(244,244,242,.45) }
 .claim-body {
   flex: 1;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 56px 24px 72px;
+  padding: 64px 32px 88px;
+}
+.claim-foot {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  padding: 18px 32px;
+  border-top: 1px solid var(--hairline);
+  font: 400 11.5px/1.4 var(--f-mono);
+  color: var(--faint);
+}
+.claim-foot a { color: var(--mute-3) }
+.claim-foot a:hover { color: var(--ink) }
+
+/* Two columns: the argument on the left, the artifact and the action on the
+   right. The card is the hook, so on narrow screens it leads. */
+.claim-layout {
+  width: 100%; max-width: 1080px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 72px;
+  align-items: start;
+}
+.claim-pitch { min-width: 0 }
+.claim-aside { min-width: 0; display: flex; flex-direction: column; gap: 18px; position: sticky; top: 32px }
+
+.claim-eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: 500 10.5px/1 var(--f-mono);
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--mute-2);
+  margin-bottom: 20px;
+}
+.claim-eyebrow.good { color: var(--good) }
+
+.claim-h1 {
+  font: 500 clamp(38px, 4.6vw, 62px)/1.02 var(--f-sans);
+  letter-spacing: -.035em;
+  color: var(--ink);
+  margin-bottom: 20px;
+  text-wrap: balance;
+}
+.claim-h1.sm {
+  font: 500 clamp(24px, 3vw, 38px)/1.15 var(--f-mono);
+  letter-spacing: -.02em;
+  overflow-wrap: anywhere;
+}
+.claim-lede {
+  font: 400 15.5px/1.6 var(--f-sans);
+  color: var(--muted);
+  max-width: 46ch;
+  margin-bottom: 28px;
+  text-wrap: pretty;
+}
+.claim-lede code {
+  font: 400 14px/1 var(--f-mono);
+  background: var(--surface-3);
+  padding: 2px 6px; border-radius: 5px;
+}
+
+/* The signature: 42 characters of noise resolving into a name. Scale does the
+   arguing — the address is set small and wide, the name large and tight. */
+.transform {
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: 26px 0;
+  margin-bottom: 36px;
+}
+.transform-row { display: flex; flex-direction: column; gap: 8px }
+.transform-label {
+  font: 500 10px/1 var(--f-mono);
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint);
+}
+.transform-hex {
+  font: 400 clamp(11px, 1.35vw, 14px)/1.5 var(--f-mono);
+  letter-spacing: .06em;
+  color: var(--faint-2);
+  overflow-wrap: anywhere;
+}
+.transform-arrow {
+  display: block;
+  width: 1px; height: 26px;
+  margin: 14px 0 14px 7px;
+  background: linear-gradient(to bottom, var(--hairline), var(--accent));
+  position: relative;
+}
+.transform-arrow::after {
+  content: ''; position: absolute; left: -3px; bottom: 0;
+  width: 7px; height: 7px;
+  border-right: 1px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+.transform-name {
+  font: 500 clamp(22px, 2.9vw, 34px)/1.15 var(--f-mono);
+  letter-spacing: -.02em;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.transform-suffix { color: var(--faint-2) }
+
+.utility { display: flex; flex-direction: column; gap: 22px; margin-top: 34px }
+.utility-item dt {
+  font: 500 13.5px/1.4 var(--f-sans);
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+.utility-item dd {
+  margin: 0; /* browsers indent dd by 40px, which reads as a mistake here */
+  font: 400 13.5px/1.6 var(--f-sans);
+  color: var(--mute-2);
+  max-width: 52ch;
+  text-wrap: pretty;
+}
+.claim-facts dd { margin: 0 }
+
+.identity-card {
+  width: 100%; height: auto;
+  border-radius: 16px;
+  display: block;
+  box-shadow: 0 24px 48px -20px rgba(14,15,17,.35), 0 2px 6px rgba(14,15,17,.06);
+}
+.identity-card.is-pending { opacity: .96 }
+.claim-aside-note {
+  font: 400 12.5px/1.6 var(--f-mono);
+  color: var(--faint);
+  text-wrap: pretty;
+}
+
+.claim-facts { display: flex; flex-direction: column; gap: 1px; background: var(--hairline); border-radius: 10px; overflow: hidden }
+.claim-facts > div {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+  padding: 11px 14px;
+  background: var(--surface);
+}
+.claim-facts dt { font: 400 11.5px/1.4 var(--f-mono); color: var(--faint); flex: none }
+.claim-facts dd { font: 500 12.5px/1.4 var(--f-sans); color: var(--ink); text-align: right; overflow-wrap: anywhere }
+.claim-facts dd.mono { font-family: var(--f-mono); font-weight: 400 }
+
+.claim-action { display: flex; flex-direction: column; gap: 14px }
+
+.claim-notice { width: 100%; max-width: 460px; text-align: center; margin: 40px auto 0 }
+.claim-notice-title { font: 600 21px/1.3 var(--f-sans); letter-spacing: -.02em; color: var(--ink); margin: 20px 0 10px }
+.claim-notice-body { font: 400 14.5px/1.6 var(--f-sans); color: var(--mute-2); text-wrap: pretty }
+
+.claim-done {
+  width: 100%; max-width: 880px;
+  display: grid; grid-template-columns: 300px minmax(0, 1fr);
+  gap: 56px; align-items: center;
+}
+.claim-done-copy { min-width: 0 }
+.claim-links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 26px }
+
+@media (max-width: 900px) {
+  .claim-layout { grid-template-columns: 1fr; gap: 30px }
+  /* Dissolve the aside so its parts can be interleaved with the pitch: the card
+     hooks, the pitch explains, and only then does the page ask for a signature.
+     Leading with the button would put the ask before the answer. */
+  .claim-aside { display: contents }
+  .identity-card    { order: -2 }
+  .claim-aside-note { order: -1 }
+  .claim-pitch      { order: 0 }
+  .claim-facts      { order: 1 }
+  .claim-action     { order: 2 }
+  .claim-aside > .notice { order: 2 }
+  .claim-done { grid-template-columns: 1fr; gap: 32px; max-width: 420px }
+}
+@media (max-width: 560px) {
+  .claim-body { padding: 40px 20px 64px }
+  .claim-bar, .claim-foot { padding-left: 20px; padding-right: 20px }
 }
 .claim-mark {
   width: 56px; height: 56px;
