@@ -300,7 +300,8 @@ export default function ClaimPage({ projectId, cid }) {
                   disabled={busy}
                   onClick={() => writeClaim({
                     address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'claim',
-                    args: [pid, entry.nameHash, entry.proof],
+                    // v3 hashes the label onchain, so the token can be named.
+                    args: [pid, entry.name, entry.proof],
                   })}
                 >
                   {claimPending ? 'Confirm in your wallet…'

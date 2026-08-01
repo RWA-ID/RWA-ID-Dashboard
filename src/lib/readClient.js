@@ -3,6 +3,7 @@ import { mainnet } from 'viem/chains'
 
 // Block at which the RWA-ID contract first had activity.
 // Narrows getLogs queries to avoid scanning irrelevant history.
+// Set this to the RWAIDv3 deployment block — deploy-v3.js prints it.
 export const CONTRACT_START_BLOCK = 24_540_000n
 
 /**

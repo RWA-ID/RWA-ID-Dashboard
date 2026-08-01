@@ -164,7 +164,9 @@ export default function OverviewScreen({ project, projectId, go }) {
                   <span style={{ flex: 1, minWidth: 0 }}>
                     {a.kind === 'claim' ? (
                       <>
-                        <span className="act-title">Identity claimed — token #{a.tokenId}</span>
+                        <span className="act-title">
+                          {a.label ? `${a.label}.${project.slug}.rwa-id.eth` : `Identity claimed — token #${a.tokenId}`}
+                        </span>
                         <span className="act-meta">
                           {shortAddress(a.claimer)} · fee {usd(a.feePaid)}
                         </span>

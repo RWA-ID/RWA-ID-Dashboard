@@ -25,6 +25,9 @@ export const IDENTITY_CLAIMED = {
     { name: 'tokenId',   type: 'uint256', indexed: false },
     { name: 'node',      type: 'bytes32', indexed: false },
     { name: 'feePaid',   type: 'uint256', indexed: false },
+    // v3 emits the plaintext label, so activity can name the identity without
+    // fetching the proof set to reverse the hash.
+    { name: 'label',     type: 'string',  indexed: false },
   ],
 }
 
@@ -121,6 +124,7 @@ export async function fetchActivity(projectId, limit = 6) {
       tokenId: l.args.tokenId?.toString(),
       claimer: l.args.claimer,
       feePaid: l.args.feePaid,
+      label: l.args.label,
     })),
     ...roots.map(l => ({
       kind: 'root',
