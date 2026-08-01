@@ -1,0 +1,135 @@
+import { useCallback, useEffect, useState } from 'react'
+import { RWAID_ADDRESS, RWAID_ABI } from './contracts'
+import { readClient, getLogsChunked } from './readClient'
+
+const PROJECT_FIELDS = [
+  'owner', 'slug', 'slugHash', 'treasury', 'claimFee', 'transferable',
+  'merkleRoot', 'active', 'totalClaimed', 'totalRevenue',
+]
+
+export const MERKLE_ROOT_UPDATED = {
+  name: 'MerkleRootUpdated', type: 'event',
+  inputs: [
+    { name: 'projectId',        type: 'uint256', indexed: true },
+    { name: 'newRoot',          type: 'bytes32', indexed: false },
+    { name: 'totalAllowlisted', type: 'uint256', indexed: false },
+  ],
+}
+
+export const IDENTITY_CLAIMED = {
+  name: 'IdentityClaimed', type: 'event',
+  inputs: [
+    { name: 'projectId', type: 'uint256', indexed: true },
+    { name: 'nameHash',  type: 'bytes32', indexed: true },
+    { name: 'claimer',   type: 'address', indexed: true },
+    { name: 'tokenId',   type: 'uint256', indexed: false },
+    { name: 'node',      type: 'bytes32', indexed: false },
+    { name: 'feePaid',   type: 'uint256', indexed: false },
+  ],
+}
+
+export function parseProject(result) {
+  if (!result) return null
+  const arr = Array.isArray(result) ? result : Object.values(result)
+  return Object.fromEntries(PROJECT_FIELDS.map((k, i) => [k, arr[i]]))
+}
+
+/**
+ * Loads every project owned by `address` straight from contract state.
+ * There is no indexer — nextProjectId bounds a multicall, then we filter by owner.
+ */
+export function useProjects(address) {
+  const [projects, setProjects] = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState('')
+
+  const load = useCallback(async () => {
+    if (!address) { setProjects([]); setLoading(false); return }
+    setLoading(true)
+    setError('')
+    try {
+      const nextId = await readClient.readContract({
+        address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'nextProjectId',
+      })
+      const total = Number(nextId) - 1
+      if (total <= 0) { setProjects([]); return }
+
+      const calls = Array.from({ length: total }, (_, i) => ({
+        address: RWAID_ADDRESS, abi: RWAID_ABI,
+        functionName: 'projects', args: [BigInt(i + 1)],
+      }))
+      const results = await readClient.multicall({ contracts: calls, allowFailure: true })
+
+      const owned = results
+        .map((r, i) => (r.result ? { id: i + 1, ...parseProject(r.result) } : null))
+        .filter(p => p && p.owner?.toLowerCase() === address.toLowerCase())
+
+      // Allowlist size only exists in the MerkleRootUpdated event, not in storage.
+      const withCounts = await Promise.all(owned.map(async (p) => {
+        try {
+          const logs = await getLogsChunked({
+            address: RWAID_ADDRESS,
+            event: MERKLE_ROOT_UPDATED,
+            args: { projectId: BigInt(p.id) },
+          })
+          const last = logs[logs.length - 1]
+          return {
+            ...p,
+            allowlisted: last ? Number(last.args.totalAllowlisted) : null,
+            rootBlock:   last ? last.blockNumber : null,
+            rootUpdates: logs.length,
+          }
+        } catch {
+          return { ...p, allowlisted: null, rootBlock: null, rootUpdates: 0 }
+        }
+      }))
+
+      setProjects(withCounts)
+    } catch (err) {
+      setError(err.shortMessage || err.message || 'Failed to load projects')
+    } finally {
+      setLoading(false)
+    }
+  }, [address])
+
+  useEffect(() => { load() }, [load])
+
+  return { projects, loading, error, reload: load }
+}
+
+/** Recent onchain activity for one project, newest first. */
+export async function fetchActivity(projectId, limit = 6) {
+  const [claims, roots] = await Promise.all([
+    getLogsChunked({ address: RWAID_ADDRESS, event: IDENTITY_CLAIMED,   args: { projectId: BigInt(projectId) } }),
+    getLogsChunked({ address: RWAID_ADDRESS, event: MERKLE_ROOT_UPDATED, args: { projectId: BigInt(projectId) } }),
+  ])
+
+  const events = [
+    ...claims.map(l => ({
+      kind: 'claim',
+      block: l.blockNumber,
+      hash: l.transactionHash,
+      tokenId: l.args.tokenId?.toString(),
+      claimer: l.args.claimer,
+      feePaid: l.args.feePaid,
+    })),
+    ...roots.map(l => ({
+      kind: 'root',
+      block: l.blockNumber,
+      hash: l.transactionHash,
+      total: Number(l.args.totalAllowlisted),
+    })),
+  ].sort((a, b) => Number(b.block - a.block)).slice(0, limit)
+
+  // Resolve timestamps only for the handful of events we actually render.
+  const blocks = [...new Set(events.map(e => e.block))]
+  const stamps = {}
+  await Promise.all(blocks.map(async (b) => {
+    try {
+      const blk = await readClient.getBlock({ blockNumber: b })
+      stamps[b.toString()] = Number(blk.timestamp)
+    } catch { /* timestamp is decorative — omit on failure */ }
+  }))
+
+  return events.map(e => ({ ...e, timestamp: stamps[e.block.toString()] ?? null }))
+}

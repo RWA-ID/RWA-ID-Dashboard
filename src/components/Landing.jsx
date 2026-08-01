@@ -1,605 +1,435 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import '../landing.css'
-import WalkthroughModal from './WalkthroughModal'
-import {
-  NetworkEthereum, NetworkBase, NetworkArbitrumOne,
-  NetworkOptimism, NetworkPolygon, NetworkLinea,
-} from '@web3icons/react'
+import SetupGuide from './SetupGuide'
+import ContactModal from './ContactModal'
+import { RWAID_ADDRESS } from '../lib/contracts'
+import { shortAddress } from '../lib/format'
+import { ArrowRight, Bridge, Check, Shield } from './icons'
 
-// real blockchain icons shown in the verification console (resolves on all chains)
-const NETWORK_ICONS = [
-  { Icon: NetworkEthereum,   name: 'Ethereum' },
-  { Icon: NetworkBase,       name: 'Base' },
-  { Icon: NetworkArbitrumOne, name: 'Arbitrum' },
-  { Icon: NetworkOptimism,   name: 'Optimism' },
-  { Icon: NetworkPolygon,    name: 'Polygon' },
-  { Icon: NetworkLinea,      name: 'Linea' },
-]
-
-const DOCS_URL      = 'https://www.notion.so/RWA-ID-Technical-Overview-Reference-Implementation-v2-4563759f55214aa7989dbb882ef08e47'
-const GITHUB_URL    = 'https://github.com/RWA-ID/RWA-ID'
-const WHITEPAPER_URL = 'https://github.com/RWA-ID/RWA-ID/blob/main/whitepaper.md'
-const REGISTRY_URL  = 'https://etherscan.io/address/0xD0B565C7134bDB16Fc3b8A9Cb5fdA003C37930c2'
-const RESOLVER_URL  = 'https://etherscan.io/address/0x765FB675AC33a85ccb455d4cb0b5Fb1f2D345eb1'
-const GATEWAY_URL   = 'https://gateway.rwa-id.com'
-
-// ── Data ──────────────────────────────────────────────────────────────────────
-
-const DOMAINS = [
-  'joe.test.rwa-id.eth',
-  'apollo.rwa-id.eth',
-  'vanguard.test.rwa-id.eth',
-  'blackrock.rwa-id.eth',
-  'nomura.test.rwa-id.eth',
-]
+export const DOCS_URL       = 'https://www.notion.so/RWA-ID-Technical-Overview-Reference-Implementation-v2-4563759f55214aa7989dbb882ef08e47'
+export const GITHUB_URL     = 'https://github.com/RWA-ID/RWA-ID'
+export const WHITEPAPER_URL = 'https://github.com/RWA-ID/RWA-ID/blob/main/whitepaper.md'
+export const REGISTRY_URL   = `https://etherscan.io/address/${RWAID_ADDRESS}`
+export const RESOLVER_URL   = 'https://etherscan.io/address/0x765FB675AC33a85ccb455d4cb0b5Fb1f2D345eb1'
+export const GATEWAY_URL    = 'https://gateway.rwa-id.com'
+export const CONTACT_EMAIL  = 'partner@rwa-id.com'
+export const X_HANDLE       = '@rwa_ideth'
+export const X_URL          = 'https://x.com/rwa_ideth'
 
 const WALLETS = [
-  { name: 'MetaMask',        bg: 'linear-gradient(135deg,#f6851b,#e2761b)', letter: 'M' },
-  { name: 'Trust Wallet',    bg: 'linear-gradient(135deg,#3375bb,#1e5fa3)', letter: 'T' },
-  { name: 'Rainbow',         bg: 'linear-gradient(135deg,#ff4000,#ffb800 40%,#00aaff 70%,#7a5cff)', letter: 'R' },
-  { name: 'Coinbase Wallet', bg: '#0052ff', letter: 'C' },
-  { name: 'Ledger',          bg: '#000', letter: 'L' },
-  { name: 'Trezor',          bg: 'linear-gradient(135deg,#111,#444)', letter: 'T' },
-  { name: 'Rabby',           bg: 'linear-gradient(135deg,#7084ff,#5c6eff)', letter: 'R' },
-  { name: 'Safe',            bg: '#12ff80', letter: 'S', colorText: '#111' },
-  { name: 'Frame',           bg: '#111', letter: 'F' },
-  { name: 'WalletConnect',   bg: '#3b99fc', letter: 'W' },
+  { file: 'metamask', name: 'MetaMask' },
+  { file: 'trust',    name: 'Trust' },
+  { file: 'rainbow',  name: 'Rainbow' },
+  { file: 'coinbase', name: 'Coinbase' },
+  { file: 'safe',     name: 'Safe' },
+  { file: 'uniswap',  name: 'Uniswap' },
+  { file: 'phantom',  name: 'Phantom' },
 ]
 
 const CHAINS = [
-  { name: 'Ethereum',  bg: '#627eea', letter: '⟠' },
-  { name: 'Base',      bg: '#0052ff', letter: 'B' },
-  { name: 'Polygon',   bg: 'linear-gradient(135deg,#8247e5,#6f34d0)', letter: '◆' },
-  { name: 'Arbitrum',  bg: '#28a0f0', letter: 'A' },
-  { name: 'Optimism',  bg: '#ff0420', letter: 'O' },
-  { name: 'Linea',     bg: '#121212', letter: 'L' },
-  { name: 'zkSync',    bg: '#1e69ff', letter: 'Z' },
-  { name: 'Scroll',    bg: '#ffeeda', letter: 'S', colorText: '#111' },
-  { name: 'Mantle',    bg: '#000',    letter: 'M' },
-  { name: 'Avalanche', bg: '#e84142', letter: 'A' },
-  { name: 'BNB Chain', bg: '#f0b90b', letter: 'B', colorText: '#111' },
-  { name: 'Gnosis',    bg: '#0c423a', letter: 'G' },
+  { file: 'ethereum',     name: 'Ethereum' },
+  { file: 'base',         name: 'Base' },
+  { file: 'arbitrum-one', name: 'Arbitrum' },
+  { file: 'optimism',     name: 'Optimism' },
+  { file: 'polygon',      name: 'Polygon' },
+  { file: 'avalanche',    name: 'Avalanche' },
+  { file: 'solana',       name: 'Solana' },
+  { file: 'bitcoin',      name: 'Bitcoin' },
 ]
 
-const SNIPPETS = {
-  viem: (
-    <>
-      <span className="tk-cm">{'// Resolve an RWA-ID across any supported chain'}</span>{'\n\n'}
-      <span className="tk-kw">import </span><span className="tk-pn">{'{ '}</span><span className="tk-var">createPublicClient</span><span className="tk-pn">, </span><span className="tk-var">http</span><span className="tk-pn">{' } '}</span><span className="tk-kw">from</span><span className="tk-str"> 'viem'</span>{'\n'}
-      <span className="tk-kw">import </span><span className="tk-pn">{'{ '}</span><span className="tk-var">base</span><span className="tk-pn">{' } '}</span><span className="tk-kw">from</span><span className="tk-str"> 'viem/chains'</span>{'\n\n'}
-      <span className="tk-kw">const </span><span className="tk-var">client</span><span className="tk-pn"> = </span><span className="tk-fn">createPublicClient</span><span className="tk-pn">{'({'}</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-var">chain</span><span className="tk-pn">: </span><span className="tk-var">base</span><span className="tk-pn">,</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-var">transport</span><span className="tk-pn">: </span><span className="tk-fn">http</span><span className="tk-pn">(),</span>{'\n'}
-      <span className="tk-pn">{'})'}</span>{'\n\n'}
-      <span className="tk-kw">const </span><span className="tk-var">address</span><span className="tk-pn"> = </span><span className="tk-kw">await </span><span className="tk-var">client</span><span className="tk-pn">.</span><span className="tk-fn">getEnsAddress</span><span className="tk-pn">({'{'}</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-var">name</span><span className="tk-pn">: </span><span className="tk-str">'joe.test.rwa-id.eth'</span><span className="tk-pn">,</span>{'\n'}
-      <span className="tk-pn">{'})'}</span>
-    </>
-  ),
-  ethers: (
-    <>
-      <span className="tk-cm">{'// Resolve an RWA-ID with ethers.js'}</span>{'\n\n'}
-      <span className="tk-kw">import </span><span className="tk-pn">{'{ '}</span><span className="tk-var">JsonRpcProvider</span><span className="tk-pn">{' } '}</span><span className="tk-kw">from</span><span className="tk-str"> 'ethers'</span>{'\n\n'}
-      <span className="tk-kw">const </span><span className="tk-var">provider</span><span className="tk-pn"> = </span><span className="tk-kw">new </span><span className="tk-fn">JsonRpcProvider</span><span className="tk-pn">(</span><span className="tk-str">'https://base.rpc'</span><span className="tk-pn">)</span>{'\n\n'}
-      <span className="tk-kw">const </span><span className="tk-var">address</span><span className="tk-pn"> = </span><span className="tk-kw">await </span><span className="tk-var">provider</span><span className="tk-pn">.</span><span className="tk-fn">resolveName</span><span className="tk-pn">(</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-str">'joe.test.rwa-id.eth'</span>{'\n'}
-      <span className="tk-pn">)</span>
-    </>
-  ),
-  wagmi: (
-    <>
-      <span className="tk-cm">{'// Resolve an RWA-ID from a React component'}</span>{'\n\n'}
-      <span className="tk-kw">import </span><span className="tk-pn">{'{ '}</span><span className="tk-var">useEnsAddress</span><span className="tk-pn">{' } '}</span><span className="tk-kw">from</span><span className="tk-str"> 'wagmi'</span>{'\n\n'}
-      <span className="tk-kw">const </span><span className="tk-pn">{'{ '}</span><span className="tk-var">data</span><span className="tk-pn">: </span><span className="tk-var">address</span><span className="tk-pn">{' } = '}</span><span className="tk-fn">useEnsAddress</span><span className="tk-pn">({'{'}</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-var">name</span><span className="tk-pn">: </span><span className="tk-str">'joe.test.rwa-id.eth'</span><span className="tk-pn">,</span>{'\n'}
-      <span className="tk-pn">{'  '}</span><span className="tk-var">chainId</span><span className="tk-pn">: </span><span className="tk-num">8453</span><span className="tk-pn">, </span><span className="tk-cm">{'// Base'}</span>{'\n'}
-      <span className="tk-pn">{'})'}</span>
-    </>
-  ),
-}
+// The phone mock claims "6 CHAINS" — keep this list exactly six long.
+const PHONE_CHAINS = ['ethereum', 'base', 'arbitrum-one', 'optimism', 'polygon', 'solana']
+  .map(file => CHAINS.find(c => c.file === file))
 
-// ── Fingerprint ───────────────────────────────────────────────────────────────
-
-function FingerprintBiometric() {
+function LogoTile({ src, alt, label }) {
   return (
-    <>
-      <svg className="fp" viewBox="0 0 200 200" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-        <path d="M100 25c-32 0-56 24-56 56v36c0 12 4 22 10 30"/>
-        <path d="M100 40c-24 0-42 18-42 42v38c0 16 4 28 11 38"/>
-        <path d="M100 55c-16 0-28 12-28 28v42c0 22 6 36 14 48" strokeOpacity=".9"/>
-        <path d="M100 70c-8 0-14 6-14 14v50c0 26 8 42 16 54" strokeOpacity=".8"/>
-        <path d="M100 85v54c0 28 6 42 12 54" strokeOpacity=".7"/>
-        <path d="M114 82c0-8-6-14-14-14s-14 6-14 14" strokeOpacity=".9"/>
-        <path d="M128 95c0-16-12-28-28-28" strokeOpacity=".85"/>
-        <path d="M142 110c0-24-18-42-42-42" strokeOpacity=".7"/>
-        <path d="M156 130c0-32-24-56-56-56" strokeOpacity=".55"/>
-      </svg>
-      <div className="fp-sweep"/>
-    </>
+    <span className="logo-tile">
+      <span className="logo-tile-mark"><img src={src} alt="" width="26" height="26" /></span>
+      <span className="logo-tile-label">{label ?? alt}</span>
+    </span>
   )
 }
 
-function FingerprintContours() {
-  const rings = Array.from({ length: 12 }, (_, i) => ({ r: 14 + i * 12, o: (1 - i / 14).toFixed(2) }))
+/* ── The phone mock; percentages are measured against hand-phone.png ─────── */
+function PhoneMock() {
   return (
-    <div className="fp-contours">
-      <svg viewBox="0 0 200 200" fill="none">
-        {rings.map(({ r, o }, i) => (
-          <circle key={i} cx="100" cy="100" r={r} stroke="var(--ink-2)" strokeWidth="1" strokeOpacity={o} fill="none"/>
-        ))}
-        <circle cx="100" cy="100" r="4" fill="var(--accent)"/>
-        <path d="M60 100a40 40 0 0 1 80 0" stroke="var(--accent)" strokeWidth="1.2" opacity=".4"/>
-        <path d="M75 100a25 25 0 0 1 50 0" stroke="var(--accent)" strokeWidth="1.2" opacity=".6"/>
-      </svg>
-      <div className="fp-sweep"/>
-    </div>
-  )
-}
+    <div className="hero-photo">
+      <img
+        src="/brand/hand-phone.png"
+        alt="A client holding a phone showing their verified RWA-ID identity"
+        className="hero-photo-img"
+      />
+      <div className="phone-screen">
+        <div className="phone-glare" />
 
-function FingerprintTokens() {
-  const [hotIdx, setHotIdx] = useState(0)
-  const samples = [
-    'alpha.test.rwa-id.eth','vanguard.rwa-id.eth','tresor.test.rwa-id.eth',
-    'aria.rwa-id.eth','lloyd.test.rwa-id.eth','helios.rwa-id.eth',
-    'kyber.rwa-id.eth','citi.test.rwa-id.eth','nomura.rwa-id.eth',
-    'apollo.rwa-id.eth','apex.test.rwa-id.eth','sigma.rwa-id.eth',
-    'orion.test.rwa-id.eth','atlas.rwa-id.eth','vega.rwa-id.eth',
-    'nexus.test.rwa-id.eth','delta.rwa-id.eth','omega.test.rwa-id.eth',
-    'prime.rwa-id.eth','axis.rwa-id.eth','lux.test.rwa-id.eth',
-    'node.rwa-id.eth','quorum.rwa-id.eth','pilot.test.rwa-id.eth',
-  ]
-  const ringDefs = [{ r: 22, n: 6 }, { r: 46, n: 10 }, { r: 72, n: 14 }, { r: 100, n: 20 }]
-  const tokens = []
-  let idx = 0
-  for (const ring of ringDefs) {
-    for (let i = 0; i < ring.n; i++) {
-      const a = (i / ring.n) * Math.PI * 2 + ring.r * 0.02
-      const x = 50 + (ring.r / 2.2) * Math.cos(a)
-      const y = 50 + (ring.r / 2.2) * Math.sin(a)
-      const rot = ((a * 180) / Math.PI + 90).toFixed(0)
-      tokens.push({ s: samples[idx % samples.length], x, y, rot, idx })
-      idx++
-    }
-  }
-  useEffect(() => {
-    const id = setInterval(() => setHotIdx(Math.floor(Math.random() * tokens.length)), 350)
-    return () => clearInterval(id)
-  }, [tokens.length])
-  return (
-    <div className="fp-tokens">
-      {tokens.map((t, i) => (
-        <span key={i} className={`token${i === hotIdx ? ' hot' : ''}`}
-          style={{ left: `${t.x}%`, top: `${t.y}%`, transform: `translate(-50%,-50%) rotate(${t.rot}deg)` }}>
-          {t.s}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-// ── Marquee ───────────────────────────────────────────────────────────────────
-
-function Marquee({ data, reverse = false }) {
-  const doubled = [...data, ...data]
-  return (
-    <div className={`marquee${reverse ? ' marquee-rev' : ''}`}>
-      <div className="marquee-track">
-        {doubled.map((d, i) => (
-          <div key={i} className="m-chip">
-            <span className="m-chip-icon" style={{ background: d.bg, color: d.colorText ?? '#fff' }}>
-              {d.letter}
-            </span>
-            {d.name}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── iMac frame — an RWA platform verification console resolving a client ID ────
-
-function ImacFrame() {
-  const FULL = 'joe.test.rwa-id.eth'
-  const [typed, setTyped] = useState('')
-  const [verified, setVerified] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    const timers = []
-    const at = (fn, ms) => timers.push(setTimeout(() => { if (!cancelled) fn() }, ms))
-
-    function run() {
-      setTyped('')
-      setVerified(false)
-      let i = 0
-      const typeNext = () => {
-        i++
-        setTyped(FULL.slice(0, i))
-        if (i < FULL.length) at(typeNext, 95)
-        else {
-          at(() => setVerified(true), 480)
-          at(run, 3400)            // hold, then loop
-        }
-      }
-      at(typeNext, 700)            // initial pause before typing
-    }
-    run()
-    return () => { cancelled = true; timers.forEach(clearTimeout) }
-  }, [])
-
-  return (
-    <div className="imac">
-      <div className="imac-body">
-        <div className="imac-screen">
-          <div className="vc">
-            <div className="vc-bar">
-              <span className="vc-brand">
-                <span className="vc-mark">R</span>RWA-ID
-                <span className="vc-sub">Verification Console</span>
-              </span>
-              <span className="vc-live"><span className="vc-live-dot"/>Live</span>
-            </div>
-            <div className="vc-body">
-              <div className="vc-label">Verify client identity</div>
-              <div className="vc-search">
-                <svg className="vc-ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="4.5"/><path d="M11 11l3 3" strokeLinecap="round"/></svg>
-                <span className="vc-name">{typed}</span>
-                {!verified && <span className="vc-caret"/>}
-              </div>
-              <div className={`vc-result${verified ? ' show' : ''}`}>
-                <span className="vc-ava"/>
-                <div className="vc-info">
-                  <span className="vc-addr">0x4a91…3c2f</span>
-                  <span className="vc-meta">KYC attested · verified client wallet</span>
-                </div>
-                <span className="vc-badge" aria-label="verified">
-                  <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7.5l2.5 2.5L11 4"/></svg>
-                  Verified
-                </span>
-              </div>
-              <div className="vc-chains">
-                <span className="vc-chains-label">Resolves on</span>
-                <div className="vc-dots">
-                  {NETWORK_ICONS.map(({ Icon, name }, i) => (
-                    <span key={i} className="vc-dot" title={name}>
-                      <Icon variant="branded" size={14}/>
-                    </span>
-                  ))}
-                </div>
-                <span className="vc-chains-all">all networks</span>
-              </div>
-            </div>
-          </div>
+        <div className="phone-row phone-head">
+          <span className="phone-title">Wallet</span>
+          <span className="phone-resolved">
+            <span className="phone-dot" />RESOLVED
+          </span>
         </div>
-        <div className="imac-chin">RWA-ID</div>
+
+        <div className="phone-identity">
+          <span className="phone-avatar" />
+          <span className="phone-identity-text">
+            <span className="phone-name">joe.rwa-id.eth</span>
+            <span className="phone-addr">0x7F3a…E6f7</span>
+          </span>
+          <span className="phone-check"><Check /></span>
+        </div>
+
+        <div className="phone-segment">
+          <span>Tokens</span>
+          <span className="is-active">Names</span>
+        </div>
+
+        <div className="phone-row phone-label-row">
+          <span className="phone-label">RESOLVES ON</span>
+          <span className="phone-label dim">6 CHAINS</span>
+        </div>
+
+        <div className="phone-list">
+          {PHONE_CHAINS.map((c, i) => (
+            <span key={c.file} className="phone-list-row" style={{ animationDelay: `${0.3 + i * 0.08}s` }}>
+              <span className="phone-chain-mark"><img src={`/brand/chains/${c.file}.svg`} alt="" /></span>
+              <span className="phone-chain-name">{c.name}</span>
+              <span className="phone-check sm"><Check /></span>
+            </span>
+          ))}
+        </div>
+
+        <div className="phone-spacer" />
+        <div className="phone-foot"><span className="phone-foot-dot" />SOULBOUND · #2841</div>
+        <div className="phone-home"><span /></div>
       </div>
-      <div className="imac-neck"/>
-      <div className="imac-base"/>
     </div>
   )
 }
-
-// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Landing({ onConnect }) {
-  const [domainIdx, setDomainIdx]       = useState(0)
-  const [domainVisible, setDomainVisible] = useState(true)
-  const [codeLang, setCodeLang]         = useState('viem')
-  const [copied, setCopied]             = useState(false)
-  const [showWalkthrough, setShowWalkthrough] = useState(false)
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setDomainVisible(false)
-      setTimeout(() => { setDomainIdx(i => (i + 1) % DOMAINS.length); setDomainVisible(true) }, 220)
-    }, 3200)
-    return () => clearInterval(id)
-  }, [])
-
-  const handleCopy = () => {
-    const text = {
-      viem:   `// Resolve an RWA-ID across any supported chain\n\nimport { createPublicClient, http } from 'viem'\nimport { base } from 'viem/chains'\n\nconst client = createPublicClient({\n  chain: base,\n  transport: http(),\n})\n\nconst address = await client.getEnsAddress({\n  name: 'joe.test.rwa-id.eth',\n})`,
-      ethers: `// Resolve an RWA-ID with ethers.js\n\nimport { JsonRpcProvider } from 'ethers'\n\nconst provider = new JsonRpcProvider('https://base.rpc')\n\nconst address = await provider.resolveName(\n  'joe.test.rwa-id.eth'\n)`,
-      wagmi:  `// Resolve an RWA-ID from a React component\n\nimport { useEnsAddress } from 'wagmi'\n\nconst { data: address } = useEnsAddress({\n  name: 'joe.test.rwa-id.eth',\n  chainId: 8453, // Base\n})`,
-    }
-    navigator.clipboard?.writeText(text[codeLang])
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1600)
-  }
+  const [showGuide, setShowGuide]     = useState(false)
+  const [showContact, setShowContact] = useState(false)
 
   return (
-    <div className="landing-root">
-      {showWalkthrough && <WalkthroughModal onClose={() => setShowWalkthrough(false)} />}
-
+    <div className="landing">
       {/* ── Nav ── */}
-      <header className="l-nav">
-        <a className="brand" href="#">
-          <span className="brand-mark">R</span>
-          <span className="brand-name">RWA-ID</span>
-        </a>
-        <nav className="nav-links">
-          <a href={DOCS_URL} target="_blank" rel="noreferrer">Docs</a>
-          <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Whitepaper</a>
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
-        </nav>
-        <div className="nav-right">
-          <button className="nav-signin" onClick={() => setShowWalkthrough(true)}>Contact</button>
-          <button className="nav-connect" onClick={onConnect}>
-            Connect wallet
+      <nav className="l-nav">
+        <div className="l-brand">
+          <span className="l-brand-mark">R</span>
+          <span className="l-brand-word">RWA·ID</span>
+        </div>
+        <div className="l-nav-links">
+          <a className="l-nav-pill" href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Protocol</a>
+          <a className="l-nav-pill" href={DOCS_URL} target="_blank" rel="noreferrer">Docs</a>
+          <a className="l-nav-pill" href={REGISTRY_URL} target="_blank" rel="noreferrer">Contract</a>
+          <button className="l-connect" onClick={onConnect}>
+            <span className="l-connect-dot" />Connect wallet
           </button>
         </div>
-      </header>
+      </nav>
 
-      <main>
-        {/* ── Hero ── */}
-        <section className="hero">
-          <div className="hero-left">
-            <div className="hero-badge">
-              <span className="dot"/>
-              On-chain
-              <span className="sep">·</span>
-              ENS-compatible
-              <span className="sep">·</span>
-              ERC-721
+      {/* ── Hero ── */}
+      <section className="l-hero">
+        <div className="hero-card">
+          <div className="hero-badge">
+            <span className="hero-badge-dot" />LIVE ON ETHEREUM MAINNET
+          </div>
+          <div className="hero-spacer" />
+          <h1 className="display">
+            Identity for<br /><span className="dim">real‑world</span><br />assets.
+          </h1>
+          <p className="lede hero-lede">
+            Verifiable, ENS-compatible onchain identities for your clients — without touching KYC or
+            internal ID systems. Non-custodial, resolvable on any chain, auditable by anyone.
+          </p>
+          <div className="row row-wrap">
+            <button className="btn btn-accent btn-lg" onClick={onConnect}>
+              Connect wallet<ArrowRight size={15} width={1.6} />
+            </button>
+            <a className="btn btn-lg hero-ghost" href={DOCS_URL} target="_blank" rel="noreferrer">Docs</a>
+          </div>
+          <p className="hero-note">Read-only until you sign. No accounts, no backend, no custody.</p>
+        </div>
+        <PhoneMock />
+      </section>
+
+      {/* ── Logo strips ── */}
+      <section className="l-strip">
+        <div className="l-strip-inner">
+          <div>
+            <div className="mono-label strip-label">Wallets that resolve</div>
+            <div className="logo-row">
+              {WALLETS.map(w => (
+                <LogoTile key={w.file} src={`/brand/wallets/${w.file}.svg`} alt={w.name} />
+              ))}
             </div>
-            <h1 className="headline">
-              Identity Infrastructure<br/>
-              for <span className="headline-accent">Real-World Assets</span>
-            </h1>
-            <p className="hero-sub">
-              Issue, manage, and revoke auditable cross-chain identities for institutional
-              clients. One ENS subdomain, resolvable on every network, minted as a verifiable
-              ERC-721 — with zero custody of personal data.
+          </div>
+          <div>
+            <div className="mono-label strip-label">Chains resolved</div>
+            <div className="logo-row">
+              {CHAINS.map(c => (
+                <LogoTile key={c.file} src={`/brand/chains/${c.file}.svg`} alt={c.name} />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="l-meta">
+          <span>REGISTRY&ensp;<a href={REGISTRY_URL} target="_blank" rel="noreferrer" className="l-meta-link">{shortAddress(RWAID_ADDRESS, 6, 4)}</a></span>
+          <span className="l-meta-rule" />
+          <span>NON-CUSTODIAL</span>
+          <span className="l-meta-rule" />
+          <span>NO BACKEND, NO INDEXER</span>
+        </div>
+      </section>
+
+      {/* ── How resolution works ── */}
+      <section className="l-section">
+        <div className="l-section-head">
+          <div>
+            <div className="mono-label" style={{ marginBottom: 18 }}>How a name resolves</div>
+            <h2 className="display-2">One name.<br /><span className="dim">Every chain.</span></h2>
+          </div>
+          <p className="l-section-lede">
+            Every identity you issue is a real ENS name, so wallets already know how to read it — no SDK,
+            no custom integration. Records are fetched offchain, verified onchain, and carried to other
+            chains by Chainlink CCIP.
+          </p>
+        </div>
+
+        <div className="l-cards">
+          <article className="l-card">
+            <div className="l-card-head">
+              <img src="/brand/ens.jpeg" alt="ENS" className="l-card-logo" />
+              <span className="mono-label">01&ensp;ENSIP‑10</span>
+            </div>
+            <h3 className="l-card-title">Wildcard resolution</h3>
+            <p className="body">
+              Your namespace points at a single resolver contract. Every subname under it —{' '}
+              <span className="code-inline">joe.rwa-id.eth</span> — answers without ever being registered.
+              Issuing a client costs no name registration.
             </p>
-            <div className="cta-row">
-              <button className="btn-hero-primary" onClick={onConnect}>
-                Connect to manage identities
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-              </button>
-              <a className="btn-hero-ghost" href={DOCS_URL} target="_blank" rel="noreferrer">
-                View the protocol
-              </a>
+          </article>
+
+          <article className="l-card">
+            <div className="l-card-head">
+              <span className="l-card-icon"><Bridge size={19} /></span>
+              <span className="mono-label">02&ensp;EIP‑3668</span>
             </div>
-            <div className="hero-meta">
-              <span className="hero-meta-live">
-                <span className="dot"/>
-                mainnet live
-              </span>
-              <span className="hero-meta-sep"/>
-              <span>audit in progress</span>
-              <span className="hero-meta-sep"/>
-              <span>v2 · ERC-721</span>
+            <h3 className="l-card-title">CCIP‑Read lookup</h3>
+            <p className="body">
+              The resolver reverts with <span className="code-inline">OffchainLookup</span>. The wallet fetches
+              the record from the gateway and the contract verifies the signed response onchain before
+              returning it — cheap data, onchain trust.
+            </p>
+          </article>
+
+          <article className="l-card">
+            <img src="/brand/chainlink-ccip.png" alt="Chainlink CCIP" className="l-card-banner" />
+            <span className="mono-label">03&ensp;CROSS‑CHAIN</span>
+            <h3 className="l-card-title">CCIP wildcard resolver</h3>
+            <p className="body">
+              The same record is readable from Base, Arbitrum, Optimism and Polygon. Chainlink CCIP carries
+              the request to Ethereum and returns the verified answer, so one name resolves everywhere.
+            </p>
+          </article>
+        </div>
+
+        <div className="query-path">
+          <span className="mono-label" style={{ marginRight: 4 }}>Query path</span>
+          <span className="chip">joe.rwa-id.eth</span>
+          <ArrowRight size={15} className="query-arrow" />
+          <span className="chip dim">ENS registry</span>
+          <ArrowRight size={15} className="query-arrow" />
+          <span className="chip dim">wildcard resolver</span>
+          <ArrowRight size={15} className="query-arrow" />
+          <span className="chip dim">CCIP gateway</span>
+          <ArrowRight size={15} className="query-arrow" />
+          <span className="chip chip-good"><span className="dot-sm" />0x7F3a…E6f7</span>
+        </div>
+      </section>
+
+      {/* ── What it does for you ── */}
+      <section className="l-section">
+        <div className="l-section-head">
+          <div>
+            <div className="mono-label" style={{ marginBottom: 18 }}>Why institutions issue</div>
+            <h2 className="display-2">Verify a client<br /><span className="dim">in one call.</span></h2>
+          </div>
+          <p className="l-section-lede">
+            An RWA-ID is three things at once: a compliance primitive your systems can query, a revenue
+            line that settles in USDC, and a human-readable address your clients actually use to move
+            tokenized assets.
+          </p>
+        </div>
+
+        <div className="l-cards l-cards-util">
+          {/* 1 — verification */}
+          <article className="l-card">
+            <div className="l-card-head">
+              <span className="l-card-icon"><Shield size={19} /></span>
+              <span className="mono-label">For your platform</span>
             </div>
+            <h3 className="l-card-title">Onchain verification, no integration</h3>
+            <p className="body">
+              Check whether a wallet belongs to a client you onboarded with one read. No API keys, no
+              webhook, no vendor uptime in your critical path — it is a public contract call any service
+              can make.
+            </p>
+            <pre className="l-code">
+              <span className="dim">{'// does this name belong to one of ours?'}</span>{'\n'}
+              <span className="l-code-kw">const</span> holder = <span className="l-code-kw">await</span> client.<span className="l-code-fn">getEnsAddress</span>({'{'}{'\n'}
+              {'  '}name: <span className="l-code-str">'joe.yourfirm.rwa-id.eth'</span>,{'\n'}
+              {'}'}) <span className="dim">{'// → 0x7F3a…E6f7'}</span>
+            </pre>
+            <ul className="l-list">
+              <li><Check size={13} /> Soulbound by default — bound to the wallet that passed KYC</li>
+              <li><Check size={13} /> Revocable by you, instantly, onchain</li>
+              <li><Check size={13} /> Every issuance and revocation is publicly auditable</li>
+            </ul>
+          </article>
+
+          {/* 2 — monetization (dark, so the money card reads as its own thing) */}
+          <article className="l-card l-card-dark">
+            <div className="l-card-head">
+              <span className="mono-label light">Monetization</span>
+            </div>
+            <h3 className="l-card-title light">You set the fee. You keep 70%.</h3>
+            <p className="body light">
+              Registering your namespace is free — you only pay gas. Each client pays a claim fee you
+              choose, in USDC, at the moment they claim. It settles straight to your treasury; RWA-ID
+              never holds your revenue.
+            </p>
+            <div className="l-split">
+              <div className="l-split-cell">
+                <div className="mono-label light">Your treasury · 70%</div>
+                <div className="l-split-value good">$5,250</div>
+              </div>
+              <div className="l-split-cell muted">
+                <div className="mono-label light">Protocol · 30%</div>
+                <div className="l-split-value">$2,250</div>
+              </div>
+            </div>
+            <p className="l-split-note">
+              Worked example: 5,000 clients × a $1.50 claim fee. Set it to $0.50 or $50 — the contract only
+              enforces the $0.50 protocol minimum, and you can change it whenever you like.
+            </p>
+          </article>
+
+          {/* 3 — client benefit */}
+          <article className="l-card">
+            <div className="l-card-head">
+              <span className="l-card-icon"><Bridge size={19} /></span>
+              <span className="mono-label">For your clients</span>
+            </div>
+            <h3 className="l-card-title">A name, not a 42-character address</h3>
+            <p className="body">
+              Your clients send and receive tokenized stocks, funds and other real-world assets using
+              <span className="code-inline"> joe.yourfirm.rwa-id.eth</span> — in the wallet they already
+              have. The same name resolves on Ethereum, Base, Arbitrum, Optimism and Polygon, so a
+              transfer cannot land on the wrong chain's address.
+            </p>
+            <div className="l-transfer">
+              <div className="l-transfer-row">
+                <span className="mono-label">Send 250 tokenized AAPL to</span>
+              </div>
+              <div className="l-transfer-name">joe.yourfirm.rwa-id.eth</div>
+              <div className="l-transfer-foot">
+                <span className="pill pill-good"><span className="dot" />Verified client</span>
+                <span className="mono-note">resolves to 0x7F3a…E6f7</span>
+              </div>
+            </div>
+            <ul className="l-list">
+              <li><Check size={13} /> Mis-typed addresses stop being a settlement risk</li>
+              <li><Check size={13} /> Counterparties can verify the holder before they send</li>
+              <li><Check size={13} /> Works in MetaMask, Safe, Rainbow, Coinbase Wallet and more</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      {/* ── Closing CTA ── */}
+      <section className="l-cta">
+        <div className="mono-label" style={{ marginBottom: 16 }}>Ready when your compliance team is</div>
+        <h2 className="display-2">Issue your first<br /><span className="dim">institutional identity.</span></h2>
+        <div className="row row-wrap" style={{ justifyContent: 'center', marginTop: 30 }}>
+          <button className="btn btn-accent btn-lg" onClick={onConnect}>
+            Connect wallet<ArrowRight size={15} width={1.6} />
+          </button>
+          <button className="btn btn-lg hero-ghost" onClick={() => setShowGuide(true)}>
+            How it works
+          </button>
+          <button className="btn btn-lg hero-ghost" onClick={() => setShowContact(true)}>
+            Book a walkthrough
+          </button>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="l-footer">
+        <div className="l-footer-top">
+          <div className="l-footer-brand">
+            <div className="l-brand">
+              <span className="l-brand-mark">R</span>
+              <span className="l-brand-word">RWA·ID</span>
+            </div>
+            <p className="l-footer-tag">
+              Identity infrastructure for regulated onchain finance. Non-custodial, ENS-native, live on
+              Ethereum mainnet.
+            </p>
+            <a className="l-social" href={X_URL} target="_blank" rel="noreferrer" aria-label="RWA-ID on X">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+              {X_HANDLE}
+            </a>
           </div>
 
-          <div className="hero-visual">
-            <ImacFrame/>
-          </div>
-        </section>
-
-        {/* ── Bento grid ── */}
-        <section className="bento">
-          <div className="bento-grid">
-
-            {/* 01 — Identity Registry */}
-            <article className="b-card b-card-registry">
-              <div className="b-head">
-                <div className="eyebrow">
-                  <span className="eyebrow-num">01</span>
-                  <span className="eyebrow-label">Identity Registry</span>
-                </div>
-                <span className="b-chip">ERC-721 · ENS node</span>
-              </div>
-
-              <div className="fingerprint-stage">
-                <FingerprintContours/>
-              </div>
-
-              <div className="domain-pill">
-                <span className="pill-live">
-                  <span className="pill-live-dot"/>live
-                </span>
-                <span className="pill-domain" style={{ opacity: domainVisible ? 1 : 0 }}>
-                  {DOMAINS[domainIdx]}
-                </span>
-                <span className="pill-token">#0x4a91…</span>
-              </div>
-
-              <div className="b-body">
-                <h3>Every identity is a token.</h3>
-                <p>Each issued subdomain becomes an ERC-721 ENS node — transferable by policy, revocable by issuer, and fully auditable on-chain. No off-chain registry, no black boxes.</p>
-              </div>
-            </article>
-
-            {/* 02 — Zero-Touch Privacy */}
-            <article className="b-card">
-              <div className="b-head">
-                <div className="eyebrow">
-                  <span className="eyebrow-num">02</span>
-                  <span className="eyebrow-label">Zero-Touch Privacy</span>
-                </div>
-              </div>
-
-              <div className="privacy-diagram" aria-hidden="true">
-                <div className="privacy-node">
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3">
-                    <path d="M9 1.5v6M9 10.5v.01M1.5 16.5h15L9 3 1.5 16.5z" strokeLinejoin="round"/>
-                  </svg>
-                  <span>KYC provider</span>
-                </div>
-                <div className="privacy-wire">
-                  <div className="privacy-wire-dash"/>
-                </div>
-                <div className="privacy-node privacy-rwa">
-                  <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.3">
-                    <circle cx="9" cy="9" r="6.5"/><circle cx="9" cy="9" r="2" fill="currentColor"/>
-                  </svg>
-                  <span>RWA-ID</span>
-                </div>
-                <div className="privacy-blocked">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2">
-                    <circle cx="7" cy="7" r="6"/><path d="M3 11L11 3"/>
-                  </svg>
-                  <span>no PII transit</span>
-                </div>
-              </div>
-
-              <div className="b-body">
-                <h3>We never touch KYC.</h3>
-                <p>Your compliance partner verifies; we mint. Personal data stays where it was attested — the chain records only the cryptographic fact.</p>
-              </div>
-            </article>
-
-            {/* 03 — Wallets */}
-            <article className="b-card">
-              <div className="b-head">
-                <div className="eyebrow">
-                  <span className="eyebrow-num">03</span>
-                  <span className="eyebrow-label">Compatible Client Wallets</span>
-                </div>
-              </div>
-              <Marquee data={WALLETS}/>
-              <div className="b-body">
-                <h3>Works in every wallet your clients already use.</h3>
-                <p>Standard ENS resolution — no extensions, no proprietary SDK. If it signs EIP-191, it resolves an RWA-ID.</p>
-              </div>
-            </article>
-
-            {/* 04 — Cross-chain */}
-            <article className="b-card">
-              <div className="b-head">
-                <div className="eyebrow">
-                  <span className="eyebrow-num">04</span>
-                  <span className="eyebrow-label">Cross-Chain via CCIP Read</span>
-                </div>
-              </div>
-              <Marquee data={CHAINS} reverse/>
-              <div className="b-body">
-                <h3>One identity. Every chain.</h3>
-                <p>CCIP Read (EIP-3668) resolves the same subdomain on Ethereum, Base, Polygon, Arbitrum, Optimism, Linea and more — with cryptographic proofs, not bridges.</p>
-              </div>
-            </article>
-
-            {/* 05 — Code snippet */}
-            <article className="b-card b-card-code">
-              <div className="b-head">
-                <div className="eyebrow">
-                  <span className="eyebrow-num">05</span>
-                  <span className="eyebrow-label">Drop-in Integration</span>
-                </div>
-              </div>
-
-              <div className="code-window">
-                <div className="code-tabs">
-                  {['viem','ethers','wagmi'].map(lang => (
-                    <button key={lang} className={`code-tab${codeLang === lang ? ' is-active' : ''}`} onClick={() => setCodeLang(lang)}>
-                      {lang}
-                    </button>
-                  ))}
-                  <button className={`code-copy${copied ? ' is-copied' : ''}`} onClick={handleCopy}>
-                    <svg width="12" height="12" viewBox="0 0 13 13" fill="none">
-                      <rect x="3.5" y="3.5" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
-                      <path d="M2 8.5V2.5a1 1 0 011-1h6" stroke="currentColor" strokeWidth="1.1"/>
-                    </svg>
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <pre className="code-body"><code>{SNIPPETS[codeLang]}</code></pre>
-              </div>
-
-              <div className="b-body">
-                <h3>Resolve in three lines.</h3>
-                <p>Works with viem, ethers.js, and wagmi. Any ENS-compatible resolution call — no proprietary client required.</p>
-              </div>
-            </article>
-
-          </div>
-        </section>
-
-        {/* ── Stats ── */}
-        <section className="l-stats">
-          <div className="l-stats-inner">
-            <div className="l-stat">
-              <div className="l-stat-num">10<span className="plus">+</span></div>
-              <div className="l-stat-label">Supported Networks</div>
+          <div className="l-footer-cols">
+            <div className="l-footer-col">
+              <div className="l-footer-col-head">Protocol</div>
+              <a href={REGISTRY_URL} target="_blank" rel="noreferrer">Registry contract</a>
+              <a href={RESOLVER_URL} target="_blank" rel="noreferrer">Resolver contract</a>
+              <a href={GATEWAY_URL} target="_blank" rel="noreferrer">CCIP gateway</a>
+              <a href={`${REGISTRY_URL}#code`} target="_blank" rel="noreferrer">Verified source</a>
             </div>
-            <div className="l-stat">
-              <div className="l-stat-num" style={{ fontSize: 28 }}>ERC-721</div>
-              <div className="l-stat-label">Token Standard</div>
+            <div className="l-footer-col">
+              <div className="l-footer-col-head">Developers</div>
+              <a href={DOCS_URL} target="_blank" rel="noreferrer">Technical docs</a>
+              <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Whitepaper</a>
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://docs.ens.domains/ensip/10" target="_blank" rel="noreferrer">ENSIP-10 wildcard</a>
             </div>
-            <div className="l-stat">
-              <div className="l-stat-num" style={{ fontSize: 28 }}>CCIP Read</div>
-              <div className="l-stat-label">Resolution Protocol</div>
+            <div className="l-footer-col">
+              <div className="l-footer-col-head">Legal</div>
+              <a href="/privacy">Privacy policy</a>
+              <a href="/terms">Terms &amp; conditions</a>
+              <a href="/refunds">Refund policy</a>
             </div>
-            <div className="l-stat">
-              <div className="l-stat-num">ENS</div>
-              <div className="l-stat-label">Identity Layer</div>
+            <div className="l-footer-col">
+              <div className="l-footer-col-head">Company</div>
+              <button onClick={() => setShowGuide(true)}>How it works</button>
+              <button onClick={() => setShowContact(true)}>Book a walkthrough</button>
+              <a href={X_URL} target="_blank" rel="noreferrer">{X_HANDLE} on X</a>
+              <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">Security disclosures</a>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* ── Footer CTA ── */}
-        <section className="footer-cta">
-          <div className="fc-eyebrow">Ready when your compliance team is.</div>
-          <h2 className="fc-headline">
-            Mint your first <span className="headline-accent">institutional identity</span>.
-          </h2>
-          <div className="cta-row">
-            <button className="btn-hero-primary" onClick={onConnect}>
-              Connect to manage identities
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-            </button>
-            <button className="btn-hero-ghost" onClick={() => setShowWalkthrough(true)}>
-              Book a walkthrough
-            </button>
+        <div className="l-footer-bottom">
+          <span>© {new Date().getFullYear()} RWA-ID Labs</span>
+          <div className="l-footer-bottom-right">
+            <a href="/privacy">Privacy</a>
+            <a href="/terms">Terms</a>
+            <a href="/refunds">Refunds</a>
+            <a href={REGISTRY_URL} target="_blank" rel="noreferrer">{shortAddress(RWAID_ADDRESS, 6, 5)}</a>
+            <span>rwa-id.eth</span>
           </div>
-        </section>
+        </div>
+      </footer>
 
-        {/* ── Footer ── */}
-        <footer className="l-footer">
-          <div className="l-footer-inner">
-            <div className="l-footer-brand">
-              <div className="brand-name">RWA-ID</div>
-              <div className="tagline">Identity infrastructure for regulated on-chain finance.</div>
-            </div>
-            <div className="l-footer-cols">
-              <div className="l-footer-col">
-                <div className="l-footer-col-head">Protocol</div>
-                <a href={REGISTRY_URL} target="_blank" rel="noreferrer">Registry contract</a>
-                <a href={RESOLVER_URL} target="_blank" rel="noreferrer">Resolver contract</a>
-                <a href={GATEWAY_URL} target="_blank" rel="noreferrer">CCIP Gateway</a>
-              </div>
-              <div className="l-footer-col">
-                <div className="l-footer-col-head">Developers</div>
-                <a href={DOCS_URL} target="_blank" rel="noreferrer">Technical docs</a>
-                <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Whitepaper</a>
-                <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
-                <a href={`${REGISTRY_URL}#code`} target="_blank" rel="noreferrer">Verified contracts</a>
-              </div>
-              <div className="l-footer-col">
-                <div className="l-footer-col-head">Company</div>
-                <button onClick={() => setShowWalkthrough(true)} style={{ background: 'none', border: 0, padding: 0, fontSize: 13.5, color: 'var(--ink-3)', cursor: 'pointer', textAlign: 'left', transition: 'color .15s', fontFamily: 'var(--f-sans)' }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--ink)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--ink-3)'}>
-                  Contact / Walkthrough
-                </button>
-                <a href={`mailto:hello@rwa-id.com`}>hello@rwa-id.com</a>
-                <a href={GITHUB_URL} target="_blank" rel="noreferrer">Security disclosures</a>
-              </div>
-            </div>
-          </div>
-          <div className="l-footer-bottom">
-            <span>© 2026 RWA-ID Labs</span>
-            <div style={{ display: 'flex', gap: 20 }}>
-              <a href={REGISTRY_URL} target="_blank" rel="noreferrer" style={{ fontFamily: 'var(--f-mono)', color: 'var(--ink-5)' }}>
-                0xD0B5…930c2
-              </a>
-              <span style={{ fontFamily: 'var(--f-mono)', color: 'var(--ink-5)' }}>rwa-id.eth</span>
-            </div>
-          </div>
-        </footer>
-      </main>
+      {showGuide   && <SetupGuide   onClose={() => setShowGuide(false)} />}
+      {showContact && <ContactModal onClose={() => setShowContact(false)} />}
     </div>
   )
 }

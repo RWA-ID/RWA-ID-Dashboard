@@ -20,7 +20,3 @@ export async function pinJSON(data, name) {
   if (!cid) throw new Error('Pinata: no CID returned — ' + JSON.stringify(result))
   return cid
 }
-
-export function ipfsUrl(cid) {
-  return `https://ipfs.io/ipfs/${cid}`
-}
