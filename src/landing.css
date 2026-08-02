@@ -90,6 +90,9 @@
 }
 .hero-spacer { flex: 1; min-height: 44px }
 .hero-card h1 { margin: 0 0 26px }
+/* Longer headline than the display scale assumes — step it down so three lines
+   still fit the hero card without crowding the lede. */
+.display.hero-title { font-size: clamp(34px, 5.5vw, 92px) }
 .hero-lede { margin: 0 0 34px; max-width: 560px }
 .hero-ghost { border-color: #C8C9C5; background: transparent }
 .hero-ghost:hover { background: var(--hairline-2) }
@@ -160,7 +163,10 @@
   width: 5.2cqw; height: 5.2cqw; border-radius: 50%; flex: none;
   background: var(--avatar);
   animation: halo 3.6s ease-out infinite;
+  overflow: hidden;
+  display: block;
 }
+.phone-avatar-art { display: block; width: 100%; height: 100% }
 .phone-identity-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: .5cqw }
 .phone-name { font: 600 2.3cqw/1.1 var(--f-sans); letter-spacing: -.025em; color: #F4F4F2; white-space: nowrap }
 .phone-addr { font: 400 1.5cqw/1.1 var(--f-mono); color: rgba(244,244,242,.52) }
@@ -232,12 +238,12 @@
   align-items: start;
 }
 .strip-label { margin-bottom: 14px }
-.logo-row { display: flex; flex-wrap: wrap; gap: 8px }
+.logo-row { display: flex; flex-wrap: wrap; gap: 10px }
 .logo-tile {
-  display: flex; flex-direction: column; align-items: center; gap: 9px;
-  width: 82px;
-  padding: 13px 6px 11px;
-  border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 11px;
+  width: 104px;
+  padding: 17px 8px 14px;
+  border-radius: 20px;
   background: var(--tile);
   transition: transform .3s cubic-bezier(.34, 1.5, .5, 1), box-shadow .3s ease, background .2s ease;
 }
@@ -247,13 +253,14 @@
   box-shadow: var(--shadow-tile);
 }
 .logo-tile-mark {
-  width: 42px; height: 42px;
-  border-radius: 13px;
+  width: 58px; height: 58px;
+  border-radius: 17px;
   background: #fff;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 1px 2px rgba(14,15,17,.07);
 }
-.logo-tile-label { font: 500 11.5px/1 var(--f-sans); color: var(--muted) }
+.logo-tile-mark img { width: 36px; height: 36px }
+.logo-tile-label { font: 500 12.5px/1 var(--f-sans); color: var(--muted) }
 
 .l-meta {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
@@ -524,6 +531,152 @@
   .legal-section.is-important { padding: 20px }
 }
 
+/* ── Documentation ──────────────────────────────────────────────────────── */
+.docs {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 48px;
+  padding: 22px 40px 72px;
+  align-items: start;
+}
+/* min-width: 0 — the mobile table of contents is a nowrap scroller, and without
+   this its min-content width would stretch the grid column past the viewport. */
+.docs-side { position: sticky; top: 24px; align-self: start; min-width: 0 }
+.docs-side-inner {
+  min-width: 0;
+  border-left: 1px solid var(--hairline-2);
+  padding-left: 20px;
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+.docs-toc { display: flex; flex-direction: column; gap: 2px }
+.docs-toc-link {
+  padding: 7px 10px;
+  margin-left: -10px;
+  border-radius: 8px;
+  font: 400 13.5px/1.35 var(--f-sans);
+  color: var(--mute-3);
+  transition: background .15s, color .15s;
+}
+.docs-toc-link:hover { background: var(--hairline-2); color: var(--ink) }
+.docs-toc-link.is-active { background: var(--tile); color: var(--ink); font-weight: 500 }
+.docs-side-foot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline-2);
+  display: flex; flex-direction: column; gap: 9px;
+  font: 400 12.5px/1.3 var(--f-sans);
+}
+.docs-side-foot a { display: inline-flex; align-items: center; gap: 5px; color: var(--mute-3) }
+.docs-side-foot a:hover { color: var(--ink) }
+
+.docs-body { max-width: 780px; width: 100%; min-width: 0 }
+.docs-head { padding-bottom: 8px }
+.docs-inline-link { color: var(--ink); text-decoration: underline; text-underline-offset: 3px }
+.docs-section {
+  padding-top: 34px;
+  margin-top: 34px;
+  border-top: 1px solid var(--hairline-2);
+  scroll-margin-top: 88px;
+}
+.docs-h {
+  font: 600 25px/1.25 var(--f-sans);
+  letter-spacing: -.028em;
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+.docs-lede {
+  font: 400 15.5px/1.6 var(--f-sans);
+  color: var(--ink);
+  margin-bottom: 20px;
+  max-width: 660px;
+  text-wrap: pretty;
+}
+.docs-section > * + .legal-dl,
+.docs-section > * + .docs-list,
+.docs-section > * + .docs-steps,
+.docs-section > * + .docs-code,
+.docs-section > * + .docs-table-wrap,
+.docs-section > * + .docs-note { margin-top: 20px }
+.docs-section > .legal-dl + *,
+.docs-section > .docs-list + *,
+.docs-section > .docs-steps + *,
+.docs-section > .docs-code + *,
+.docs-section > .docs-table-wrap + *,
+.docs-section > .docs-note + * { margin-top: 20px }
+
+.docs-list li { font-size: 14px }
+.docs-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px }
+.docs-steps li { display: grid; grid-template-columns: 34px 1fr; gap: 14px; align-items: start }
+.docs-step-n {
+  font: 400 11px/1 var(--f-mono);
+  letter-spacing: .06em;
+  color: var(--mute-3);
+  padding-top: 4px;
+}
+.docs-step-h {
+  font: 600 15px/1.4 var(--f-sans);
+  letter-spacing: -.015em;
+  color: var(--ink);
+  margin-bottom: 5px;
+}
+.docs-code { margin: 0 }
+.docs-code figcaption { margin-bottom: 9px }
+.docs-code .l-code { white-space: pre; overflow-x: auto }
+.docs-note { align-items: flex-start; font-size: 13.5px; line-height: 1.6 }
+
+.docs-table-wrap { overflow-x: auto; border: 1px solid var(--hairline-2); border-radius: 14px }
+.docs-table { width: 100%; border-collapse: collapse; font: 400 13px/1.5 var(--f-sans) }
+.docs-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font: 400 10.5px/1 var(--f-mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--mute-3);
+  border-bottom: 1px solid var(--hairline-2);
+  white-space: nowrap;
+}
+.docs-table td { padding: 13px 16px; border-bottom: 1px solid var(--hairline-faint); color: var(--muted) }
+.docs-table tr:last-child td { border-bottom: 0 }
+.docs-table td:first-child { color: var(--ink); font-weight: 500; white-space: nowrap }
+.docs-table td.is-addr { font-family: var(--f-mono); font-size: 11.5px; white-space: nowrap }
+.docs-table td.is-addr a { display: inline-flex; align-items: center; gap: 5px; color: var(--muted) }
+.docs-table td.is-addr a:hover { color: var(--ink) }
+
+.docs-cta {
+  margin-top: 44px;
+  padding: 28px;
+  border-radius: 18px;
+  background: var(--panel);
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .docs { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 18px 20px 56px }
+  .docs-side { position: static; max-height: none }
+  .docs-side-inner { border-left: 0; padding-left: 0; max-height: none }
+  /* One scrollable row, so the table of contents never buries the article. */
+  .docs-toc {
+    flex-direction: row; flex-wrap: nowrap; gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .docs-toc::-webkit-scrollbar { display: none }
+  .docs-toc-link {
+    margin-left: 0;
+    flex: none;
+    white-space: nowrap;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    padding: 7px 13px;
+  }
+  .docs-side-foot { flex-direction: row; flex-wrap: wrap; gap: 16px; margin-top: 16px; padding-top: 14px }
+  .docs-steps li { grid-template-columns: 26px 1fr; gap: 10px }
+}
+
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1180px) {
   .l-cards { grid-template-columns: 1fr }
@@ -540,10 +693,14 @@
   .l-nav { padding: 18px 20px 12px; flex-wrap: wrap }
   .l-nav-links { width: 100%; margin-left: 0 }
   .hero-card { padding: 32px 24px 28px; border-radius: 18px }
+  /* Each headline line has to survive a 390px card without wrapping twice. */
+  .display.hero-title { font-size: 34px }
   .l-footer { padding: 36px 20px 22px }
   .l-footer-cols { grid-template-columns: 1fr 1fr; gap: 26px }
   .l-cta { padding: 52px 20px }
-  .logo-tile { width: 72px }
+  .logo-tile { width: 86px; padding: 14px 6px 12px }
+  .logo-tile-mark { width: 48px; height: 48px; border-radius: 15px }
+  .logo-tile-mark img { width: 30px; height: 30px }
 }
 @media (max-width: 460px) {
   .l-footer-cols { grid-template-columns: 1fr }

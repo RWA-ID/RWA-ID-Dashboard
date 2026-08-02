@@ -27,6 +27,7 @@ export const Vault       = (p) => <Icon width={1.4} {...p}><path d="M2 6.2L8 3l6
 export const Lock        = (p) => <Icon width={1.4} {...p}><rect x="3" y="7" width="10" height="6.5" rx="1.4" /><path d="M5.4 7V5.2a2.6 2.6 0 0 1 5.2 0V7" /></Icon>
 export const Pause       = (p) => <Icon width={1.4} {...p}><rect x="4.2" y="3.5" width="2.4" height="9" rx=".8" /><rect x="9.4" y="3.5" width="2.4" height="9" rx=".8" /></Icon>
 export const Person      = (p) => <Icon width={1.4} {...p}><circle cx="8" cy="6" r="2.8" /><path d="M3 13.5a5 5 0 0 1 10 0" /></Icon>
+export const Info        = (p) => <Icon width={1.4} {...p}><circle cx="8" cy="8" r="5.8" /><path d="M8 7.4v3.6M8 5.1v.4" /></Icon>
 export const Help        = (p) => <Icon width={1.4} {...p}><circle cx="8" cy="8" r="5.8" /><path d="M6.4 6.2A1.7 1.7 0 0 1 9.7 6.8c0 1.2-1.7 1.4-1.7 2.4M8 11.2v.4" /></Icon>
 export const Disconnect  = (p) => <Icon width={1.4} {...p}><path d="M6.5 13.5H4A1.5 1.5 0 0 1 2.5 12V4A1.5 1.5 0 0 1 4 2.5h2.5M10 5.5L12.5 8 10 10.5M6 8h6.5" /></Icon>
 export const Copy        = (p) => <Icon width={1.4} {...p}><rect x="5.5" y="5.5" width="8" height="8" rx="1.5" /><path d="M10.5 5.5V4A1.5 1.5 0 0 0 9 2.5H4A1.5 1.5 0 0 0 2.5 4v5A1.5 1.5 0 0 0 4 10.5h1.5" /></Icon>

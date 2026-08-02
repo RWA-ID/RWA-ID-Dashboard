@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../landing.css'
 import SetupGuide from './SetupGuide'
 import ContactModal from './ContactModal'
@@ -6,7 +6,9 @@ import { RWAID_ADDRESS } from '../lib/contracts'
 import { shortAddress } from '../lib/format'
 import { ArrowRight, Bridge, Check, Shield } from './icons'
 
-export const DOCS_URL       = 'https://www.notion.so/RWA-ID-Technical-Overview-Reference-Implementation-v2-4563759f55214aa7989dbb882ef08e47'
+// Docs live on this console (see DocsPage) rather than in an external wiki, so
+// the reference tracks the deployed contract instead of drifting behind it.
+export const DOCS_PATH      = '/docs'
 export const GITHUB_URL     = 'https://github.com/RWA-ID/RWA-ID'
 export const WHITEPAPER_URL = 'https://github.com/RWA-ID/RWA-ID/blob/main/whitepaper.md'
 export const REGISTRY_URL   = `https://etherscan.io/address/${RWAID_ADDRESS}`
@@ -15,6 +17,9 @@ export const GATEWAY_URL    = 'https://gateway.rwa-id.com'
 export const CONTACT_EMAIL  = 'partner@rwa-id.com'
 export const X_HANDLE       = '@rwa_ideth'
 export const X_URL          = 'https://x.com/rwa_ideth'
+
+// Must match <title> in index.html — the SPA restores it after routing away.
+const HOME_TITLE = 'RWA-ID — Identity issuance and management for RWA platforms'
 
 const WALLETS = [
   { file: 'metamask', name: 'MetaMask' },
@@ -41,10 +46,42 @@ const CHAINS = [
 const PHONE_CHAINS = ['ethereum', 'base', 'arbitrum-one', 'optimism', 'polygon', 'solana']
   .map(file => CHAINS.find(c => c.file === file))
 
+// Docs are a real URL (crawlable, shareable) routed client-side on click.
+export function goToDocs(e) {
+  e.preventDefault()
+  window.history.pushState({}, '', DOCS_PATH)
+  window.dispatchEvent(new PopStateEvent('popstate'))
+  window.scrollTo(0, 0)
+}
+
+/* ── The client's face in the identity row — illustrated, not a stock photo ── */
+function PhoneAvatar() {
+  return (
+    <span className="phone-avatar" aria-hidden="true">
+      <svg viewBox="0 0 40 40" className="phone-avatar-art">
+        <defs>
+          <clipPath id="pa-clip"><circle cx="20" cy="20" r="20" /></clipPath>
+          <linearGradient id="pa-bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#4C8DFF" />
+            <stop offset="1" stopColor="#7C5CFF" />
+          </linearGradient>
+        </defs>
+        <g clipPath="url(#pa-clip)">
+          <rect width="40" height="40" fill="url(#pa-bg)" />
+          {/* shoulders */}
+          <path d="M20 23.4c7.1 0 12.9 5.2 12.9 11.6V40H7.1v-5c0-6.4 5.8-11.6 12.9-11.6z" fill="#F4F4F2" opacity=".95" />
+          {/* head */}
+          <circle cx="20" cy="15.2" r="6.9" fill="#F4F4F2" />
+        </g>
+      </svg>
+    </span>
+  )
+}
+
 function LogoTile({ src, alt, label }) {
   return (
     <span className="logo-tile">
-      <span className="logo-tile-mark"><img src={src} alt="" width="26" height="26" /></span>
+      <span className="logo-tile-mark"><img src={src} alt="" width="36" height="36" /></span>
       <span className="logo-tile-label">{label ?? alt}</span>
     </span>
   )
@@ -70,7 +107,7 @@ function PhoneMock() {
         </div>
 
         <div className="phone-identity">
-          <span className="phone-avatar" />
+          <PhoneAvatar />
           <span className="phone-identity-text">
             <span className="phone-name">joe.rwa-id.eth</span>
             <span className="phone-addr">0x7F3a…E6f7</span>
@@ -110,6 +147,11 @@ export default function Landing({ onConnect }) {
   const [showGuide, setShowGuide]     = useState(false)
   const [showContact, setShowContact] = useState(false)
 
+  // Routing to docs or a legal page retitles the tab; restore it on the way back.
+  useEffect(() => {
+    document.title = HOME_TITLE
+  }, [])
+
   return (
     <div className="landing">
       {/* ── Nav ── */}
@@ -119,8 +161,8 @@ export default function Landing({ onConnect }) {
           <span className="l-brand-word">RWA·ID</span>
         </div>
         <div className="l-nav-links">
-          <a className="l-nav-pill" href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Protocol</a>
-          <a className="l-nav-pill" href={DOCS_URL} target="_blank" rel="noreferrer">Docs</a>
+          <a className="l-nav-pill" href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Whitepaper</a>
+          <a className="l-nav-pill" href={DOCS_PATH} onClick={goToDocs}>Docs</a>
           <a className="l-nav-pill" href={REGISTRY_URL} target="_blank" rel="noreferrer">Contract</a>
           <button className="l-connect" onClick={onConnect}>
             <span className="l-connect-dot" />Connect wallet
@@ -135,18 +177,19 @@ export default function Landing({ onConnect }) {
             <span className="hero-badge-dot" />LIVE ON ETHEREUM MAINNET
           </div>
           <div className="hero-spacer" />
-          <h1 className="display">
-            Identity for<br /><span className="dim">real‑world</span><br />assets.
+          <h1 className="display hero-title">
+            Identity issuance<br /><span className="dim">and management</span><br />for RWA platforms.
           </h1>
           <p className="lede hero-lede">
-            Verifiable, ENS-compatible onchain identities for your clients — without touching KYC or
-            internal ID systems. Non-custodial, resolvable on any chain, auditable by anyone.
+            Issue verifiable, ENS-compatible onchain identities to your clients, then administer them —
+            fees, transferability, revocation — without touching KYC or internal ID systems.
+            Non-custodial, resolvable on any chain, auditable by anyone.
           </p>
           <div className="row row-wrap">
             <button className="btn btn-accent btn-lg" onClick={onConnect}>
               Connect wallet<ArrowRight size={15} width={1.6} />
             </button>
-            <a className="btn btn-lg hero-ghost" href={DOCS_URL} target="_blank" rel="noreferrer">Docs</a>
+            <a className="btn btn-lg hero-ghost" href={DOCS_PATH} onClick={goToDocs}>Read the docs</a>
           </div>
           <p className="hero-note">Read-only until you sign. No accounts, no backend, no custody.</p>
         </div>
@@ -394,7 +437,7 @@ export default function Landing({ onConnect }) {
             </div>
             <div className="l-footer-col">
               <div className="l-footer-col-head">Developers</div>
-              <a href={DOCS_URL} target="_blank" rel="noreferrer">Technical docs</a>
+              <a href={DOCS_PATH} onClick={goToDocs}>Technical docs</a>
               <a href={WHITEPAPER_URL} target="_blank" rel="noreferrer">Whitepaper</a>
               <a href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub</a>
               <a href="https://docs.ens.domains/ensip/10" target="_blank" rel="noreferrer">ENSIP-10 wildcard</a>
