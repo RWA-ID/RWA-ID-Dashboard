@@ -46,7 +46,7 @@ const CRUMBS = {
 
 export default function Console({ address }) {
   const { disconnect } = useDisconnect()
-  const { projects, loading, error, logError, reload } = useProjects(address)
+  const { projects, loading, error, logError, protocolFeePercent, reload } = useProjects(address)
 
   const [screen, setScreen]   = useState('projects')
   const [pid, setPid]         = useState(null)
@@ -95,12 +95,12 @@ export default function Console({ address }) {
     try { disconnect() } catch { /* wagmi connector already gone */ }
   }
 
-  const screenProps = { project, projectId: pid, go, refresh, address }
+  const screenProps = { project, projectId: pid, go, refresh, address, protocolFeePercent }
   const inProject = pid != null && project
 
   const renderScreen = () => {
     switch (screen) {
-      case 'create':    return <CreateProject address={address} go={go} onCreated={refresh} />
+      case 'create':    return <CreateProject address={address} go={go} onCreated={refresh} protocolFeePercent={protocolFeePercent} />
       case 'overview':  return inProject ? <OverviewScreen {...screenProps} /> : null
       case 'allowlist': return inProject ? <AllowlistScreen {...screenProps} /> : null
       case 'fee':       return inProject ? <ClaimFeeScreen {...screenProps} /> : null
@@ -113,7 +113,7 @@ export default function Console({ address }) {
         return (
           <ProjectsScreen
             projects={projects} loading={loading} error={error}
-            go={go} onRetry={refresh}
+            go={go} onRetry={refresh} protocolFeePercent={protocolFeePercent}
           />
         )
     }

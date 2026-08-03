@@ -90,6 +90,15 @@ export const RWAID_ABI = [
     outputs: [{ name: '', type: 'uint256' }],
   },
   {
+    // The protocol's cut of every claim fee. Owner-settable, so the console
+    // reads it rather than assuming the 30 it launched with.
+    name: 'protocolFeePercent',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
     name: 'nameNodeFromHash',
     type: 'function',
     stateMutability: 'view',

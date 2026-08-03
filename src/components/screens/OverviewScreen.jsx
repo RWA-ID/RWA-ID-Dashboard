@@ -4,11 +4,12 @@ import { fetchActivity } from '../../lib/useProjects'
 import { claimUrl } from '../../lib/allowlistStore'
 import { useProofSet } from '../../lib/useProofSet'
 import {
-  effectiveFee, num, pct, relativeTime, shortAddress, shortHash, usd, usdCompact, ZERO_ROOT,
+  effectiveFee, num, pct, relativeTime, shortAddress, shortHash, treasuryPercent,
+  usd, usdCompact, ZERO_ROOT,
 } from '../../lib/format'
 import { ChevronRight, Coin, Copy, External, List, Search, Warning } from '../icons'
 
-export default function OverviewScreen({ project, projectId, go }) {
+export default function OverviewScreen({ project, projectId, go, protocolFeePercent }) {
   const [activity, setActivity] = useState(null)
   const [activityError, setActivityError] = useState('')
   const [copied, setCopied] = useState(false)
@@ -94,8 +95,8 @@ export default function OverviewScreen({ project, projectId, go }) {
         </div>
         <div className="stat">
           <div className="stat-label">Revenue</div>
-          <div className="stat-value good">{usdCompact(project.totalRevenue)}</div>
-          <div className="stat-meta">USDC · your 70% share</div>
+          <div className="stat-value good">{usdCompact(project.treasuryRevenue)}</div>
+          <div className="stat-meta">USDC · your {treasuryPercent(protocolFeePercent)}% share</div>
         </div>
         <div className="stat">
           <div className="stat-label">Claim fee</div>

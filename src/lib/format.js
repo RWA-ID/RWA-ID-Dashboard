@@ -61,6 +61,27 @@ export function relativeTime(seconds) {
   return `${Math.floor(months / 12)}y ago`
 }
 
+export const DEFAULT_PROTOCOL_FEE_PERCENT = 30n
+
+// `Project.totalRevenue` accumulates the *gross* fee every claimer paid, but the
+// treasury only ever received the platform side of the split — the protocol cut
+// went straight to the protocol treasury and never touched this address. Mirror
+// the contract's own arithmetic so the console reports money actually received.
+//
+// The contract floors the protocol share per claim; we can only floor once over
+// the lifetime total, so this can read a few micro-USDC low against a
+// claim-by-claim sum. That is well under a cent and never overstates.
+export function treasuryShare(grossRevenue, protocolFeePercent) {
+  const gross = BigInt(grossRevenue ?? 0n)
+  const percent = BigInt(protocolFeePercent ?? DEFAULT_PROTOCOL_FEE_PERCENT)
+  return gross - (gross * percent) / 100n
+}
+
+// The treasury's side of the split, as a whole percent — for labels like "70%".
+export function treasuryPercent(protocolFeePercent) {
+  return 100 - Number(protocolFeePercent ?? DEFAULT_PROTOCOL_FEE_PERCENT)
+}
+
 // The contract treats claimFee == 0 as "inherit the protocol minimum".
 export function effectiveFee(project, minimumFee) {
   if (!project) return minimumFee ?? 500000n

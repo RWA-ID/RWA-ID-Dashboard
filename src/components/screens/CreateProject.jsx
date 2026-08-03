@@ -3,7 +3,7 @@ import { useReadContract } from 'wagmi'
 import { isAddress, parseUnits } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
 import { readClient } from '../../lib/readClient'
-import { usd, shortAddress } from '../../lib/format'
+import { treasuryPercent, usd, shortAddress } from '../../lib/format'
 import TxDrawer, { useTx } from '../TxDrawer'
 import { ArrowLeft, ArrowRight, Warning } from '../icons'
 
@@ -15,7 +15,9 @@ const STEPS = [
   { n: 3, label: 'Token policy', note: 'default per token' },
 ]
 
-export default function CreateProject({ address, go, onCreated }) {
+export default function CreateProject({ address, go, onCreated, protocolFeePercent }) {
+  const yourPct     = treasuryPercent(protocolFeePercent)
+  const protocolPct = 100 - yourPct
   const [step, setStep]         = useState(1)
   const [slug, setSlug]         = useState('')
   const [fee, setFee]           = useState('')
@@ -162,12 +164,12 @@ export default function CreateProject({ address, go, onCreated }) {
 
               <div className="split-2">
                 <div className="split-cell">
-                  <div className="mono-label" style={{ marginBottom: 8 }}>Your treasury · 70%</div>
-                  <div className="split-value good">{usd(effectiveNum * 0.7)}</div>
+                  <div className="mono-label" style={{ marginBottom: 8 }}>Your treasury · {yourPct}%</div>
+                  <div className="split-value good">{usd(effectiveNum * (yourPct / 100))}</div>
                 </div>
                 <div className="split-cell muted">
-                  <div className="mono-label" style={{ marginBottom: 8 }}>Protocol · 30%</div>
-                  <div className="split-value">{usd(effectiveNum * 0.3)}</div>
+                  <div className="mono-label" style={{ marginBottom: 8 }}>Protocol · {protocolPct}%</div>
+                  <div className="split-value">{usd(effectiveNum * (protocolPct / 100))}</div>
                 </div>
               </div>
 

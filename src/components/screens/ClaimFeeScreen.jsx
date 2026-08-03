@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useReadContract } from 'wagmi'
 import { parseUnits, formatUnits } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
-import { effectiveFee, num, usd } from '../../lib/format'
+import { effectiveFee, num, treasuryPercent, usd } from '../../lib/format'
 import TxDrawer, { useTx } from '../TxDrawer'
 import { ArrowRight, Warning } from '../icons'
 
-export default function ClaimFeeScreen({ project, projectId, refresh }) {
+export default function ClaimFeeScreen({ project, projectId, refresh, protocolFeePercent }) {
   const [value, setValue]   = useState('')
   const [drawer, setDrawer] = useState(false)
   const tx = useTx()
@@ -19,6 +19,11 @@ export default function ClaimFeeScreen({ project, projectId, refresh }) {
 
   const current    = effectiveFee(project, minimum)
   const currentNum = Number(formatUnits(current, 6))
+
+  const yourPct     = treasuryPercent(protocolFeePercent)
+  const protocolPct = 100 - yourPct
+  const yourCut     = yourPct / 100
+  const protocolCut = protocolPct / 100
 
   const parsed  = parseFloat(value)
   const hasInput = value !== '' && Number.isFinite(parsed)
@@ -80,12 +85,12 @@ export default function ClaimFeeScreen({ project, projectId, refresh }) {
 
             <div className="split-2">
               <div className="split-cell">
-                <div className="mono-label" style={{ marginBottom: 8 }}>Your treasury · 70%</div>
-                <div className="split-value good sm">{usd(nextNum * 0.7)}</div>
+                <div className="mono-label" style={{ marginBottom: 8 }}>Your treasury · {yourPct}%</div>
+                <div className="split-value good sm">{usd(nextNum * yourCut)}</div>
               </div>
               <div className="split-cell muted">
-                <div className="mono-label" style={{ marginBottom: 8 }}>Protocol · 30%</div>
-                <div className="split-value sm">{usd(nextNum * 0.3)}</div>
+                <div className="mono-label" style={{ marginBottom: 8 }}>Protocol · {protocolPct}%</div>
+                <div className="split-value sm">{usd(nextNum * protocolCut)}</div>
               </div>
             </div>
 
@@ -108,7 +113,7 @@ export default function ClaimFeeScreen({ project, projectId, refresh }) {
               <div className="kv-row" style={{ padding: 0, border: 0 }}>
                 <span className="kv-key">Your revenue if all claim</span>
                 <span className="kv-val good">
-                  {unclaimed != null ? usd(unclaimed * nextNum * 0.7) : '—'}
+                  {unclaimed != null ? usd(unclaimed * nextNum * yourCut) : '—'}
                 </span>
               </div>
               <div className="kv-row" style={{ padding: 0, border: 0 }}>
@@ -143,8 +148,8 @@ export default function ClaimFeeScreen({ project, projectId, refresh }) {
         rows={[
           { k: 'Current fee',   v: usd(current) },
           { k: 'New fee',       v: usd(nextNum), tone: 'accent' },
-          { k: 'Your share',    v: usd(nextNum * 0.7), tone: 'good' },
-          { k: 'Protocol share', v: usd(nextNum * 0.3) },
+          { k: 'Your share',    v: usd(nextNum * yourCut), tone: 'good' },
+          { k: 'Protocol share', v: usd(nextNum * protocolCut) },
         ]}
         fn="updateClaimFee(uint256,uint256)"
         onSign={sign}

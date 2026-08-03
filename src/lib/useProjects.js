@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { RWAID_ADDRESS, RWAID_ABI } from './contracts'
 import { readClient, getLogsChunked } from './readClient'
+import { DEFAULT_PROTOCOL_FEE_PERCENT, treasuryShare } from './format'
 
 const PROJECT_FIELDS = [
   'owner', 'slug', 'slugHash', 'treasury', 'claimFee', 'transferable',
@@ -46,6 +47,7 @@ export function useProjects(address) {
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState('')
   const [logError, setLogError] = useState('')
+  const [feePercent, setFeePercent] = useState(DEFAULT_PROTOCOL_FEE_PERCENT)
 
   const load = useCallback(async () => {
     if (!address) { setProjects([]); setLoading(false); return }
@@ -53,9 +55,15 @@ export function useProjects(address) {
     setError('')
     setLogError('')
     try {
-      const nextId = await readClient.readContract({
-        address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'nextProjectId',
-      })
+      const [nextId, protocolFeePercent] = await Promise.all([
+        readClient.readContract({
+          address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'nextProjectId',
+        }),
+        readClient.readContract({
+          address: RWAID_ADDRESS, abi: RWAID_ABI, functionName: 'protocolFeePercent',
+        }),
+      ])
+      setFeePercent(protocolFeePercent)
       const total = Number(nextId) - 1
       if (total <= 0) { setProjects([]); return }
 
@@ -68,6 +76,9 @@ export function useProjects(address) {
       const owned = results
         .map((r, i) => (r.result ? { id: i + 1, ...parseProject(r.result) } : null))
         .filter(p => p && p.owner?.toLowerCase() === address.toLowerCase())
+        // totalRevenue is gross; what the treasury actually received is the
+        // platform side of the split. Screens should read treasuryRevenue.
+        .map(p => ({ ...p, treasuryRevenue: treasuryShare(p.totalRevenue, protocolFeePercent) }))
 
       // Allowlist size only exists in the MerkleRootUpdated event, not in storage.
       // One unfiltered scan covers every project — far cheaper than a scan each.
@@ -106,7 +117,7 @@ export function useProjects(address) {
 
   useEffect(() => { load() }, [load])
 
-  return { projects, loading, error, logError, reload: load }
+  return { projects, loading, error, logError, protocolFeePercent: feePercent, reload: load }
 }
 
 /** Recent onchain activity for one project, newest first. */

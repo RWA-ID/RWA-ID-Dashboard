@@ -1,4 +1,4 @@
-import { effectiveFee, initials, num, pct, tint, usd, usdCompact, ZERO_ROOT } from '../../lib/format'
+import { effectiveFee, initials, num, pct, tint, treasuryPercent, usd, usdCompact, ZERO_ROOT } from '../../lib/format'
 import { ChevronRight, Plus, Warning } from '../icons'
 
 const COLS = '2.1fr 1fr 1.5fr 1fr .8fr .9fr 30px'
@@ -7,10 +7,11 @@ function needsReview(p) {
   return !p.active || !p.merkleRoot || p.merkleRoot === ZERO_ROOT
 }
 
-export default function ProjectsScreen({ projects, loading, error, go, onRetry }) {
+export default function ProjectsScreen({ projects, loading, error, go, onRetry, protocolFeePercent }) {
   const totalClaimed = projects.reduce((a, p) => a + Number(p.totalClaimed), 0)
   const totalAllow   = projects.reduce((a, p) => a + (p.allowlisted ?? 0), 0)
-  const totalRevenue = projects.reduce((a, p) => a + p.totalRevenue, 0n)
+  const totalRevenue = projects.reduce((a, p) => a + p.treasuryRevenue, 0n)
+  const yourShare    = treasuryPercent(protocolFeePercent)
   const attention    = projects.filter(needsReview).length
   const rate         = pct(totalClaimed, totalAllow)
 
@@ -43,7 +44,7 @@ export default function ProjectsScreen({ projects, loading, error, go, onRetry }
           <div className="stat">
             <div className="stat-label">Revenue to treasury</div>
             <div className="stat-value good">{usdCompact(totalRevenue)}</div>
-            <div className="stat-meta">USDC · lifetime</div>
+            <div className="stat-meta">USDC · lifetime · your {yourShare}% share</div>
           </div>
           <div className="stat">
             <div className="stat-label">Needs review</div>
@@ -124,7 +125,7 @@ export default function ProjectsScreen({ projects, loading, error, go, onRetry }
                 </span>
 
                 <span style={{ textAlign: 'right', font: '500 13.5px/1 var(--f-sans)' }}>
-                  {usdCompact(p.totalRevenue)}
+                  {usdCompact(p.treasuryRevenue)}
                 </span>
                 <span style={{ textAlign: 'right', font: '400 12.5px/1 var(--f-mono)', color: 'var(--ink-2)' }}>
                   {usd(effectiveFee(p))}

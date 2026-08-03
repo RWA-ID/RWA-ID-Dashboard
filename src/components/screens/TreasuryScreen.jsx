@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { isAddress, getAddress } from 'viem'
 import { RWAID_ADDRESS, RWAID_ABI } from '../../lib/contracts'
-import { shortAddress, usdCompact } from '../../lib/format'
+import { shortAddress, treasuryPercent, usdCompact } from '../../lib/format'
 import TxDrawer, { useTx } from '../TxDrawer'
 import { ArrowRight, Warning } from '../icons'
 
-export default function TreasuryScreen({ project, projectId, refresh }) {
+export default function TreasuryScreen({ project, projectId, refresh, protocolFeePercent }) {
   const [value, setValue]   = useState('')
   const [drawer, setDrawer] = useState(false)
   const tx = useTx()
@@ -34,7 +34,9 @@ export default function TreasuryScreen({ project, projectId, refresh }) {
     <div>
       <div style={{ marginBottom: 24 }}>
         <h1 className="screen-title" style={{ marginBottom: 7 }}>Treasury</h1>
-        <p className="screen-sub">The address that receives your 70% share of every claim fee.</p>
+        <p className="screen-sub">
+          The address that receives your {treasuryPercent(protocolFeePercent)}% share of every claim fee.
+        </p>
       </div>
 
       <div className="card maxw-680">
@@ -44,7 +46,7 @@ export default function TreasuryScreen({ project, projectId, refresh }) {
             <div className="mono-label" style={{ marginBottom: 8 }}>Current treasury</div>
             <div className="mono" style={{ fontSize: 13.5, overflowWrap: 'anywhere' }}>{project.treasury}</div>
             <div className="mono-note" style={{ marginTop: 8 }}>
-              received {usdCompact(project.totalRevenue)} to date
+              received {usdCompact(project.treasuryRevenue)} to date
             </div>
           </div>
 
